@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 type Dish = {
@@ -182,7 +182,7 @@ export default function MenuManager() {
           library={MOCK_LIBRARY}
           weekMeals={weekMeals}
           onClose={() => setAssignModalOpen(null)}
-          onAssign={(dish) => handleAssign(assignModalOpen, dish)}
+          onAssign={(dish: Dish) => handleAssign(assignModalOpen, dish)}
         />
       )}
     </div>
@@ -212,7 +212,7 @@ function AssignDishModal({ day, library, weekMeals, onClose, onAssign }: any) {
     return acc;
   }, {});
 
-  const filtered = library.filter(d => d.name.toLowerCase().includes(search.toLowerCase()) && d.status === 'Active');
+  const filtered = library.filter((d: Dish) => d.name.toLowerCase().includes(search.toLowerCase()) && d.status === 'Active');
 
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }}>
@@ -231,7 +231,7 @@ function AssignDishModal({ day, library, weekMeals, onClose, onAssign }: any) {
         />
 
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px', paddingRight: '8px' }}>
-          {filtered.map(dish => {
+          {filtered.map((dish: Dish) => {
             const usedDay = assignedDishes[dish.id];
             const isUsed = !!usedDay;
             return (

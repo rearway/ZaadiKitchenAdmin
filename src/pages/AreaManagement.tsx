@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 type AreaStatus = 'Active' | 'Coming Soon' | 'Paused';
@@ -24,7 +24,7 @@ const MOCK_AREAS: Area[] = [
 export default function AreaManagement() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<'All' | AreaStatus>('All');
-  const [areas, setAreas] = useState<Area[]>(MOCK_AREAS);
+  const [areas] = useState<Area[]>(MOCK_AREAS);
 
   const filteredAreas = areas.filter(a => filter === 'All' || a.status === filter);
 

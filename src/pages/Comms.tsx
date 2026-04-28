@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 const AUTOMATIONS = [
   { id: '1', icon: '✅', color: 'var(--color-mint)', name: 'Delivery Confirmed', desc: 'Mark as Delivered tap → WhatsApp to customer', defaultOn: true },
