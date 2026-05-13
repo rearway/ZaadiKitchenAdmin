@@ -30,9 +30,9 @@ export default function AreaManagement() {
 
   const getStatusColor = (status: AreaStatus) => {
     switch(status) {
-      case 'Active': return 'var(--color-mint)';
-      case 'Coming Soon': return 'var(--color-lemon)';
-      case 'Paused': return 'var(--color-papaya)';
+      case 'Active': return 'var(--err)';
+      case 'Coming Soon': return 'var(--err)';
+      case 'Paused': return 'var(--err)';
     }
   };
 
@@ -41,7 +41,7 @@ export default function AreaManagement() {
       
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ fontSize: '32px', fontFamily: 'var(--font-serif)', margin: 0 }}>Delivery Zones</h1>
+        <h1 style={{ fontSize: '32px', fontFamily: "Montserrat, sans-serif", margin: 0 }}>Delivery Zones</h1>
       </div>
 
       {/* Filters */}
@@ -92,7 +92,7 @@ export default function AreaManagement() {
               <button className="btn-ghost" style={{ border: '1px solid #333', padding: '8px 16px' }}>✏️ Edit</button>
               
               {area.status === 'Active' && (
-                <button className="btn-ghost" style={{ backgroundColor: 'rgba(255, 115, 64, 0.1)', color: 'var(--color-papaya)', padding: '8px 16px' }}>
+                <button className="btn-ghost" style={{ backgroundColor: 'rgba(255, 115, 64, 0.1)', color: 'var(--err)', padding: '8px 16px' }}>
                   ⏸ Pause
                 </button>
               )}

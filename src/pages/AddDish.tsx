@@ -12,7 +12,7 @@ export default function AddDish() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <button className="btn-ghost" style={{ padding: '8px 12px' }} onClick={() => navigate(-1)}>&larr;</button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <h1 style={{ fontSize: '32px', fontFamily: 'var(--font-serif)', margin: 0 }}>Add Dish</h1>
+          <h1 style={{ fontSize: '32px', fontFamily: "Montserrat, sans-serif", margin: 0 }}>Add Dish</h1>
           <span style={{ backgroundColor: '#333', color: '#FFF', padding: '4px 10px', borderRadius: '16px', fontSize: '13px', fontWeight: 600 }}>
             Admin
           </span>
@@ -78,7 +78,7 @@ export default function AddDish() {
 
           <div>
             <label style={{ display: 'block', fontSize: '14px', color: '#D1D5DB', fontWeight: 600, marginBottom: '8px' }}>CHEF'S NOTE (ENGLISH)</label>
-            <textarea placeholder="Add any specific heating or allergy notes..." style={{ width: '100%', height: '100px', backgroundColor: '#222', border: '1px solid #333', borderRadius: '8px', padding: '12px', color: '#FFF', fontFamily: 'var(--font-sans)', resize: 'vertical' }} />
+            <textarea placeholder="Add any specific heating or allergy notes..." style={{ width: '100%', height: '100px', backgroundColor: '#222', border: '1px solid #333', borderRadius: '8px', padding: '12px', color: '#FFF', fontFamily: "Montserrat, sans-serif", resize: 'vertical' }} />
           </div>
 
           <div>

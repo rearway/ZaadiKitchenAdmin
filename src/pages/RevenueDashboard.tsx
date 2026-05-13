@@ -20,11 +20,11 @@ export default function RevenueDashboard() {
         </div>
         
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '16px', marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '48px', fontFamily: 'var(--font-serif)', margin: 0, lineHeight: 1 }}>
+          <h1 style={{ fontSize: '48px', fontFamily: "Montserrat, sans-serif", margin: 0, lineHeight: 1 }}>
             SAR 54,200
           </h1>
           <div style={{ 
-            backgroundColor: 'rgba(0, 200, 150, 0.15)', color: 'var(--color-mint)', 
+            backgroundColor: 'rgba(0, 200, 150, 0.15)', color: 'var(--err)', 
             padding: '4px 12px', borderRadius: '16px', fontSize: '14px', fontWeight: 600, marginBottom: '6px'
           }}>
             ↑ +12.4% vs last month
@@ -34,8 +34,8 @@ export default function RevenueDashboard() {
         {/* 3 Stat Tiles */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
           <StatTile label="ACTIVE" value="248" onClick={() => navigate('/customers?filter=active')} />
-          <StatTile label="NEW TODAY" value="14" color="var(--color-mint)" onClick={() => navigate('/customers?filter=new')} />
-          <StatTile label="CHURNED" value="3" color="var(--color-papaya)" onClick={() => navigate('/customers?filter=churned')} />
+          <StatTile label="NEW TODAY" value="14" color="var(--err)" onClick={() => navigate('/customers?filter=new')} />
+          <StatTile label="CHURNED" value="3" color="var(--err)" onClick={() => navigate('/customers?filter=churned')} />
         </div>
       </div>
 
@@ -68,10 +68,10 @@ export default function RevenueDashboard() {
           </h3>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <HorizontalBar label="Month" count={129} width="52%" color="var(--color-mint)" />
-            <HorizontalBar label="Weekly" count={70} width="28%" color="var(--color-gold)" />
-            <HorizontalBar label="Quarterly" count={35} width="14%" color="var(--color-purple)" />
-            <HorizontalBar label="Try It" count={14} width="6%" color="var(--color-papaya)" />
+            <HorizontalBar label="Month" count={129} width="52%" color="var(--err)" />
+            <HorizontalBar label="Weekly" count={70} width="28%" color="var(--red)" />
+            <HorizontalBar label="Quarterly" count={35} width="14%" color="var(--ops)" />
+            <HorizontalBar label="Try It" count={14} width="6%" color="var(--err)" />
           </div>
         </div>
       </div>
@@ -81,7 +81,7 @@ export default function RevenueDashboard() {
         <div style={{ backgroundColor: '#1A1A1A', padding: '24px', borderRadius: '16px', border: '1px solid #333' }}>
           <div style={{ fontSize: '14px', color: '#9CA3AF', letterSpacing: '1px', marginBottom: '12px' }}>AVG SKIP RATE</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
-            <span style={{ fontSize: '32px', fontFamily: 'var(--font-serif)', color: 'var(--color-papaya)' }}>1.4</span>
+            <span style={{ fontSize: '32px', fontFamily: "Montserrat, sans-serif", color: 'var(--err)' }}>1.4</span>
             <span style={{ color: '#9CA3AF', fontSize: '14px' }}>↑ +0.2 vs last week</span>
           </div>
         </div>
@@ -89,7 +89,7 @@ export default function RevenueDashboard() {
         <div style={{ backgroundColor: '#1A1A1A', padding: '24px', borderRadius: '16px', border: '1px solid #333' }}>
           <div style={{ fontSize: '14px', color: '#9CA3AF', letterSpacing: '1px', marginBottom: '12px' }}>SALAD MEAL %</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
-            <span style={{ fontSize: '32px', fontFamily: 'var(--font-serif)', color: 'var(--color-mint)' }}>34%</span>
+            <span style={{ fontSize: '32px', fontFamily: "Montserrat, sans-serif", color: 'var(--err)' }}>34%</span>
             <span style={{ color: '#9CA3AF', fontSize: '14px' }}>of active subs</span>
           </div>
         </div>
@@ -110,7 +110,7 @@ function StatTile({ label, value, color = '#FFF', onClick }: any) {
     onMouseOver={e => e.currentTarget.style.backgroundColor = '#2A2A2A'}
     onMouseOut={e => e.currentTarget.style.backgroundColor = '#222'}>
       <div style={{ fontSize: '12px', color: '#9CA3AF', letterSpacing: '1px', fontWeight: 600 }}>{label}</div>
-      <div style={{ fontSize: '28px', fontFamily: 'var(--font-serif)', color }}>{value}</div>
+      <div style={{ fontSize: '28px', fontFamily: "Montserrat, sans-serif", color }}>{value}</div>
     </div>
   );
 }
@@ -121,7 +121,7 @@ function BarChartCol({ day, height, opacity, today }: any) {
       <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
         <div style={{ 
           width: '60%', height: height, 
-          backgroundColor: 'var(--color-mint)', opacity, 
+          backgroundColor: 'var(--err)', opacity, 
           borderRadius: '4px 4px 0 0',
           minHeight: height === '0%' ? '2px' : height
         }} />

@@ -43,18 +43,18 @@ export default function DailyOps() {
       <div style={{ backgroundColor: '#1A1A1A', padding: '24px', borderRadius: '16px', border: '1px solid #333' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
           <div>
-            <h1 style={{ fontSize: '32px', fontFamily: 'var(--font-serif)', marginBottom: '8px' }}>
+            <h1 style={{ fontSize: '32px', fontFamily: "Montserrat, sans-serif", marginBottom: '8px' }}>
               Daily Ops <span style={{ color: '#9CA3AF', fontSize: '20px' }}>· {todayDate}</span>
             </h1>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <span style={{ 
-                backgroundColor: role === 'Admin' ? '#333' : 'var(--color-blue)', 
+                backgroundColor: role === 'Admin' ? '#333' : 'var(--ops)', 
                 color: '#FFF', padding: '4px 10px', borderRadius: '16px', fontSize: '13px', fontWeight: 600
               }}>
                 {role}
               </span>
-              <span style={{ color: 'var(--color-red)', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span className="live-pulse" style={{ width: '8px', height: '8px', backgroundColor: 'var(--color-red)', borderRadius: '50%', display: 'inline-block' }}></span>
+              <span style={{ color: 'var(--err)', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span className="live-pulse" style={{ width: '8px', height: '8px', backgroundColor: 'var(--err)', borderRadius: '50%', display: 'inline-block' }}></span>
                 LIVE
               </span>
             </div>
@@ -62,7 +62,7 @@ export default function DailyOps() {
           
           <div style={{ display: 'flex', gap: '24px' }}>
             <StatBox label="MEALS" value="87" />
-            <StatBox label="ISSUES" value={issues.length.toString()} color="var(--color-papaya)" />
+            <StatBox label="ISSUES" value={issues.length.toString()} color="var(--err)" />
             <StatBox label="SKIPPED" value="12" />
           </div>
         </div>
@@ -118,7 +118,7 @@ export default function DailyOps() {
               </div>
             ) : issues.map(issue => (
               <div key={issue.id} style={{ backgroundColor: '#1A1A1A', padding: '20px', borderRadius: '12px', border: '1px solid #333' }}>
-                <div style={{ display: 'inline-block', padding: '4px 8px', backgroundColor: 'rgba(255, 115, 64, 0.1)', color: 'var(--color-papaya)', borderRadius: '6px', fontSize: '13px', fontWeight: 600, marginBottom: '12px' }}>
+                <div style={{ display: 'inline-block', padding: '4px 8px', backgroundColor: 'rgba(255, 115, 64, 0.1)', color: 'var(--err)', borderRadius: '6px', fontSize: '13px', fontWeight: 600, marginBottom: '12px' }}>
                   {issue.type}
                 </div>
                 <h4 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>{issue.customer}</h4>
@@ -131,12 +131,12 @@ export default function DailyOps() {
                   {role === 'Admin' ? (
                     <>
                       <button className="btn-primary" style={{ padding: '8px 16px', flex: 1 }} onClick={() => setActiveIssueForCredit(issue)}>💳 Credit Wallet</button>
-                      <button style={{ backgroundColor: 'var(--color-blue)', color: '#FFF', padding: '8px 16px', borderRadius: '8px', fontWeight: 600, flex: 1 }}>↑ Escalate</button>
-                      <button style={{ backgroundColor: 'transparent', color: 'var(--color-red)', border: '1px solid var(--color-red)', padding: '8px 16px', borderRadius: '8px', fontWeight: 600, flex: 1 }} onClick={() => setActiveIssueForReject(issue)}>✕ Reject</button>
+                      <button style={{ backgroundColor: 'var(--ops)', color: '#FFF', padding: '8px 16px', borderRadius: '8px', fontWeight: 600, flex: 1 }}>↑ Escalate</button>
+                      <button style={{ backgroundColor: 'transparent', color: 'var(--err)', border: '1px solid var(--err)', padding: '8px 16px', borderRadius: '8px', fontWeight: 600, flex: 1 }} onClick={() => setActiveIssueForReject(issue)}>✕ Reject</button>
                     </>
                   ) : (
                     <>
-                      <button style={{ backgroundColor: 'var(--color-blue)', color: '#FFF', padding: '8px 16px', borderRadius: '8px', fontWeight: 600 }}>↑ Escalate</button>
+                      <button style={{ backgroundColor: 'var(--ops)', color: '#FFF', padding: '8px 16px', borderRadius: '8px', fontWeight: 600 }}>↑ Escalate</button>
                       <span style={{ color: '#6B7280', fontSize: '13px', marginLeft: 'auto' }}>Credit wallet: Admin only</span>
                     </>
                   )}
@@ -157,7 +157,7 @@ export default function DailyOps() {
         .live-pulse { animation: pulse 2s infinite; }
         
         @keyframes pulse-papaya {
-          0% { box-shadow: 0 0 0 0 rgba(255, 115, 64, 0.4); }
+          0% { box-shadow: 0 0 0 0 rgba(228,40,29,.40); }
           70% { box-shadow: 0 0 0 10px rgba(255, 115, 64, 0); }
           100% { box-shadow: 0 0 0 0 rgba(255, 115, 64, 0); }
         }
@@ -195,7 +195,7 @@ function StatBox({ label, value, color = '#FFF' }: { label: string, value: strin
   return (
     <div style={{ textAlign: 'right' }}>
       <div style={{ color: '#9CA3AF', fontSize: '12px', fontWeight: 600, letterSpacing: '1px', marginBottom: '4px' }}>{label}</div>
-      <div style={{ fontSize: '32px', fontFamily: 'var(--font-serif)', color }}>{value}</div>
+      <div style={{ fontSize: '32px', fontFamily: "Montserrat, sans-serif", color }}>{value}</div>
     </div>
   );
 }
@@ -208,7 +208,7 @@ function StatusStep({ label, status, icon }: { label: string, status: 'completed
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', zIndex: 1 }}>
       <div className={isActive ? 'status-pulse' : ''} style={{ 
         width: '40px', height: '40px', borderRadius: '50%',
-        backgroundColor: isCompleted ? 'var(--color-mint)' : isActive ? 'var(--color-papaya)' : '#333',
+        backgroundColor: isCompleted ? 'var(--err)' : isActive ? 'var(--err)' : '#333',
         color: isCompleted ? '#000' : '#FFF',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: '18px', fontWeight: 'bold'
@@ -224,7 +224,7 @@ function StatusLine({ status }: { status: 'active' | 'pending' }) {
   return (
     <div style={{ 
       flex: 1, height: '2px', 
-      backgroundColor: status === 'active' ? 'var(--color-mint)' : '#333',
+      backgroundColor: status === 'active' ? 'var(--err)' : '#333',
       transform: 'translateY(-16px)'
     }} />
   );
@@ -237,7 +237,7 @@ function CreditModal({ issue, amount, setAmount, onClose, onConfirm }: any) {
 
   return (
     <ModalOverlay onClose={onClose}>
-      <h2 style={{ fontSize: '24px', fontFamily: 'var(--font-serif)', marginBottom: '8px' }}>Credit Wallet</h2>
+      <h2 style={{ fontSize: '24px', fontFamily: "Montserrat, sans-serif", marginBottom: '8px' }}>Credit Wallet</h2>
       <p style={{ color: '#9CA3AF', fontSize: '14px', lineHeight: '1.5', marginBottom: '24px' }}>
         Issue: {issue.type} — {issue.customer}. Wallet credit is added immediately and customer is notified via WhatsApp.
       </p>
@@ -249,14 +249,14 @@ function CreditModal({ issue, amount, setAmount, onClose, onConfirm }: any) {
             type="number" 
             value={amount}
             onChange={e => setAmount(e.target.value)}
-            style={{ width: '100%', fontSize: '32px', padding: '16px 16px 16px 64px', textAlign: 'center', borderColor: isError ? 'var(--color-red)' : '#374151' }}
+            style={{ width: '100%', fontSize: '32px', padding: '16px 16px 16px 64px', textAlign: 'center', borderColor: isError ? 'var(--err)' : '#374151' }}
             placeholder="0"
           />
         </div>
       </div>
 
       {isError && (
-        <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--color-red)', padding: '12px', borderRadius: '8px', fontSize: '14px', marginBottom: '16px', textAlign: 'center' }}>
+        <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--err)', padding: '12px', borderRadius: '8px', fontSize: '14px', marginBottom: '16px', textAlign: 'center' }}>
           Amount exceeds maximum of SAR 30. Please enter a lower amount.
         </div>
       )}
@@ -287,7 +287,7 @@ function RejectModal({ issue, reason, setReason, onClose, onConfirm }: any) {
 
   return (
     <ModalOverlay onClose={onClose}>
-      <h2 style={{ fontSize: '24px', fontFamily: 'var(--font-serif)', marginBottom: '8px', color: 'var(--color-red)' }}>Reject Issue</h2>
+      <h2 style={{ fontSize: '24px', fontFamily: "Montserrat, sans-serif", marginBottom: '8px', color: 'var(--err)' }}>Reject Issue</h2>
       <p style={{ color: '#9CA3AF', fontSize: '14px', lineHeight: '1.5', marginBottom: '24px' }}>
         Issue: {issue.type} — {issue.customer}. Select a reason. This closes the issue without crediting the customer's wallet.
       </p>
@@ -295,12 +295,12 @@ function RejectModal({ issue, reason, setReason, onClose, onConfirm }: any) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
         {options.map(opt => (
           <div key={opt.id} onClick={() => setReason(opt.id)} style={{ 
-            padding: '16px', borderRadius: '8px', border: `1px solid ${reason === opt.id ? 'var(--color-red)' : '#333'}`, 
+            padding: '16px', borderRadius: '8px', border: `1px solid ${reason === opt.id ? 'var(--err)' : '#333'}`, 
             backgroundColor: reason === opt.id ? 'rgba(239, 68, 68, 0.05)' : '#222', cursor: 'pointer' 
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: `2px solid ${reason === opt.id ? 'var(--color-red)' : '#666'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {reason === opt.id && <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-red)' }} />}
+              <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: `2px solid ${reason === opt.id ? 'var(--err)' : '#666'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {reason === opt.id && <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--err)' }} />}
               </div>
               <div>
                 <div style={{ fontWeight: 600, color: '#FFF' }}>{opt.title}</div>
@@ -313,7 +313,7 @@ function RejectModal({ issue, reason, setReason, onClose, onConfirm }: any) {
 
       <div style={{ display: 'flex', gap: '16px' }}>
         <button className="btn-ghost" style={{ flex: 1, backgroundColor: '#222' }} onClick={onClose}>Cancel</button>
-        <button style={{ flex: 2, backgroundColor: 'var(--color-red)', color: '#FFF', padding: '12px', borderRadius: '8px', fontWeight: 600 }} disabled={!reason} onClick={onConfirm}>
+        <button style={{ flex: 2, backgroundColor: 'var(--err)', color: '#FFF', padding: '12px', borderRadius: '8px', fontWeight: 600 }} disabled={!reason} onClick={onConfirm}>
           Confirm Rejection
         </button>
       </div>

@@ -1,18 +1,28 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
 
 :root {
-  --color-mint: #00C896;
-  --color-papaya: #FF7340;
-  --color-ink: #1A1A1A;
-  --color-lemon: #F5E642;
-  --color-gold: #F5A623;
-  --color-sage: #4CAF7D;
-  --color-blue: #3B82F6;
-  --color-purple: #8B5CF6;
-  --color-red: #EF4444;
+  --red:   #E4281D;
+  --redd:  #B52016;
+  --redm:  rgba(228,40,29,.15);
+  --redl:  rgba(228,40,29,.07);
 
-  --font-serif: 'Fraunces', serif;
-  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --blk:   #000000;
+  --blk2:  #111111;
+  --blk3:  #1A1A1A;
+
+  --mid:   #6B7280;
+  --soft:  #9CA3AF;
+  --border:#E5E7EB;
+  --bg:    #F9FAFB;
+  --white: #ffffff;
+
+  --ops:   #374151;
+  --opsl:  rgba(55,65,81,.08);
+
+  --grn:   #16A34A;
+  --grnl:  #DCFCE7;
+  --err:   #DC2626;
+  --errl:  #FEF2F2;
 }
 
 * {
@@ -22,25 +32,25 @@
 }
 
 body {
-  font-family: var(--font-sans);
-  background-color: var(--color-ink);
+  font-family: 'Montserrat', sans-serif;
+  background-color: var(--blk3);
   color: #FFFFFF;
   -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-serif);
+  font-family: 'Montserrat', sans-serif;
 }
 
 button {
-  font-family: var(--font-sans);
+  font-family: 'Montserrat', sans-serif;
   cursor: pointer;
   border: none;
   outline: none;
 }
 
 .btn-primary {
-  background-color: var(--color-mint);
+  background-color: var(--err);
   color: #FFFFFF;
   padding: 12px 24px;
   border-radius: 8px;
@@ -72,7 +82,7 @@ button {
 }
 
 input {
-  font-family: var(--font-sans);
+  font-family: 'Montserrat', sans-serif;
   background: transparent;
   border: 1px solid #374151;
   color: white;
@@ -83,5 +93,5 @@ input {
 }
 
 input:focus {
-  border-color: var(--color-mint);
+  border-color: var(--err);
 }

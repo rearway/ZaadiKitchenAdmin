@@ -6,7 +6,7 @@ const TILES = [
     id: 'ops',
     title: 'Daily Ops',
     icon: '🍛',
-    color: 'var(--color-papaya)',
+    color: 'var(--err)',
     sub: '2 open issues',
     live: true,
     path: '/ops'
@@ -15,7 +15,7 @@ const TILES = [
     id: 'revenue',
     title: 'Revenue',
     icon: '📊',
-    color: 'var(--color-mint)',
+    color: 'var(--err)',
     sub: 'SAR 54,200 MRR',
     path: '/revenue'
   },
@@ -23,7 +23,7 @@ const TILES = [
     id: 'menu',
     title: 'Menu Manager',
     icon: '📅',
-    color: 'var(--color-lemon)',
+    color: 'var(--err)',
     sub: 'Week of Apr 7 ready',
     path: '/menu'
   },
@@ -31,7 +31,7 @@ const TILES = [
     id: 'customers',
     title: 'Customers',
     icon: '👥',
-    color: 'var(--color-blue)',
+    color: 'var(--ops)',
     sub: '248 active',
     path: '/customers'
   },
@@ -39,7 +39,7 @@ const TILES = [
     id: 'comms',
     title: 'Comms',
     icon: '💬',
-    color: 'var(--color-purple)',
+    color: 'var(--ops)',
     sub: '5 automations live',
     path: '/comms'
   },
@@ -47,7 +47,7 @@ const TILES = [
     id: 'areas',
     title: 'Areas',
     icon: '📍',
-    color: 'var(--color-sage)',
+    color: 'var(--grn)',
     sub: '3 active zones',
     path: '/areas'
   }
@@ -61,7 +61,7 @@ export default function DashboardHome() {
       
       {/* Greeting Area */}
       <div>
-        <h1 style={{ fontSize: '32px', fontFamily: 'var(--font-serif)', marginBottom: '8px' }}>
+        <h1 style={{ fontSize: '32px', fontFamily: "Montserrat, sans-serif", marginBottom: '8px' }}>
           Good morning, Admin 👋
         </h1>
         <p style={{ color: '#9CA3AF', fontSize: '16px' }}>Zaadi Kitchen · Riyadh Operations</p>
@@ -108,10 +108,10 @@ export default function DashboardHome() {
                 <div style={{ 
                   display: 'flex', alignItems: 'center', gap: '6px', 
                   backgroundColor: 'rgba(239, 68, 68, 0.1)', 
-                  color: 'var(--color-red)', 
+                  color: 'var(--err)', 
                   padding: '4px 8px', borderRadius: '16px', fontSize: '12px', fontWeight: 'bold' 
                 }}>
-                  <span className="live-pulse" style={{ width: '6px', height: '6px', backgroundColor: 'var(--color-red)', borderRadius: '50%', display: 'inline-block' }}></span>
+                  <span className="live-pulse" style={{ width: '6px', height: '6px', backgroundColor: 'var(--err)', borderRadius: '50%', display: 'inline-block' }}></span>
                   LIVE
                 </div>
               )}

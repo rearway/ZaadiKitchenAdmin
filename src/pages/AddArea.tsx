@@ -12,7 +12,7 @@ export default function AddArea() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <button className="btn-ghost" style={{ padding: '8px 12px' }} onClick={() => navigate(-1)}>&larr;</button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <h1 style={{ fontSize: '32px', fontFamily: 'var(--font-serif)', margin: 0 }}>Add Area</h1>
+          <h1 style={{ fontSize: '32px', fontFamily: "Montserrat, sans-serif", margin: 0 }}>Add Area</h1>
           <span style={{ backgroundColor: '#333', color: '#FFF', padding: '4px 10px', borderRadius: '16px', fontSize: '13px', fontWeight: 600 }}>
             Admin
           </span>
@@ -28,7 +28,7 @@ export default function AddArea() {
 
         <div>
           <label style={{ display: 'block', fontSize: '14px', color: '#D1D5DB', fontWeight: 600, marginBottom: '8px' }}>COVERAGE DESCRIPTION</label>
-          <textarea placeholder="e.g. Northern Riyadh, bounded by..." style={{ width: '100%', height: '80px', backgroundColor: '#222', border: '1px solid #333', borderRadius: '8px', padding: '12px', color: '#FFF', fontFamily: 'var(--font-sans)', resize: 'vertical' }} />
+          <textarea placeholder="e.g. Northern Riyadh, bounded by..." style={{ width: '100%', height: '80px', backgroundColor: '#222', border: '1px solid #333', borderRadius: '8px', padding: '12px', color: '#FFF', fontFamily: "Montserrat, sans-serif", resize: 'vertical' }} />
         </div>
 
         <div style={{ display: 'flex', gap: '24px' }}>
@@ -72,7 +72,7 @@ export default function AddArea() {
 
         <div>
           <label style={{ display: 'block', fontSize: '14px', color: '#D1D5DB', fontWeight: 600, marginBottom: '8px' }}>INTERNAL NOTES</label>
-          <textarea placeholder="e.g. Needs extra rider. Coordinate with ops..." style={{ width: '100%', height: '80px', backgroundColor: '#222', border: '1px solid #333', borderRadius: '8px', padding: '12px', color: '#FFF', fontFamily: 'var(--font-sans)', resize: 'vertical' }} />
+          <textarea placeholder="e.g. Needs extra rider. Coordinate with ops..." style={{ width: '100%', height: '80px', backgroundColor: '#222', border: '1px solid #333', borderRadius: '8px', padding: '12px', color: '#FFF', fontFamily: "Montserrat, sans-serif", resize: 'vertical' }} />
         </div>
 
         {/* CTA */}
@@ -92,13 +92,13 @@ function RadioCard({ active, onClick, title, desc }: any) {
     <div 
       onClick={onClick}
       style={{
-        padding: '16px', borderRadius: '8px', border: `1px solid ${active ? 'var(--color-mint)' : '#333'}`, 
+        padding: '16px', borderRadius: '8px', border: `1px solid ${active ? 'var(--err)' : '#333'}`, 
         backgroundColor: active ? 'rgba(0, 200, 150, 0.05)' : '#222', cursor: 'pointer',
         display: 'flex', alignItems: 'center', gap: '16px'
       }}
     >
-      <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${active ? 'var(--color-mint)' : '#666'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {active && <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-mint)' }} />}
+      <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${active ? 'var(--err)' : '#666'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {active && <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--err)' }} />}
       </div>
       <div>
         <div style={{ fontWeight: 600, color: '#FFF' }}>{title}</div>

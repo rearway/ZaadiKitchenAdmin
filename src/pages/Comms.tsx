@@ -1,10 +1,10 @@
 import { useState } from 'react';
 
 const AUTOMATIONS = [
-  { id: '1', icon: '✅', color: 'var(--color-mint)', name: 'Delivery Confirmed', desc: 'Mark as Delivered tap → WhatsApp to customer', defaultOn: true },
-  { id: '2', icon: '⭐', color: 'var(--color-lemon)', name: 'End-of-Day Feedback', desc: '3:00 PM daily → all meal recipients', defaultOn: true },
-  { id: '3', icon: '🔄', color: 'var(--color-blue)', name: 'Renewal Reminder', desc: '48 hrs before plan end date', defaultOn: true },
-  { id: '4', icon: '🎁', color: 'var(--color-papaya)', name: 'Referral Reward', desc: 'Referred friend\'s plan activates', defaultOn: true },
+  { id: '1', icon: '✅', color: 'var(--err)', name: 'Delivery Confirmed', desc: 'Mark as Delivered tap → WhatsApp to customer', defaultOn: true },
+  { id: '2', icon: '⭐', color: 'var(--err)', name: 'End-of-Day Feedback', desc: '3:00 PM daily → all meal recipients', defaultOn: true },
+  { id: '3', icon: '🔄', color: 'var(--ops)', name: 'Renewal Reminder', desc: '48 hrs before plan end date', defaultOn: true },
+  { id: '4', icon: '🎁', color: 'var(--err)', name: 'Referral Reward', desc: 'Referred friend\'s plan activates', defaultOn: true },
   { id: '5', icon: '😴', color: '#9CA3AF', name: 'Lapsed Reactivation', desc: 'Plan expired + no renewal after 3 days', defaultOn: false },
 ];
 
@@ -32,7 +32,7 @@ export default function Comms() {
       
       {/* Header & Tabs */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ fontSize: '32px', fontFamily: 'var(--font-serif)', margin: 0 }}>Comms & Automations</h1>
+        <h1 style={{ fontSize: '32px', fontFamily: "Montserrat, sans-serif", margin: 0 }}>Comms & Automations</h1>
         
         <div style={{ display: 'flex', backgroundColor: '#1A1A1A', padding: '4px', borderRadius: '8px', border: '1px solid #333' }}>
           <TabButton active={activeTab === 'automations'} onClick={() => setActiveTab('automations')}>⚡ Automations</TabButton>
@@ -84,10 +84,10 @@ export default function Comms() {
                     key={seg} 
                     onClick={() => setSegment(seg)}
                     style={{ 
-                      backgroundColor: segment === seg ? 'rgba(0, 200, 150, 0.1)' : '#222', 
-                      color: segment === seg ? 'var(--color-mint)' : '#9CA3AF', 
+                      backgroundColor: segment === seg ? 'rgba(228,40,29,.10)' : '#222', 
+                      color: segment === seg ? 'var(--err)' : '#9CA3AF', 
                       padding: '8px 20px', borderRadius: '24px', 
-                      border: `1px solid ${segment === seg ? 'var(--color-mint)' : '#333'}`, 
+                      border: `1px solid ${segment === seg ? 'var(--err)' : '#333'}`, 
                       fontSize: '14px', fontWeight: segment === seg ? 600 : 400
                     }}
                   >
@@ -96,7 +96,7 @@ export default function Comms() {
                 ))}
               </div>
               
-              <div style={{ display: 'inline-flex', alignItems: 'center', backgroundColor: 'var(--color-mint)', color: '#000', padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', backgroundColor: 'var(--err)', color: '#000', padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold' }}>
                 👥 To: {getRecipientCount()} subscribers
               </div>
             </div>
@@ -105,7 +105,7 @@ export default function Comms() {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <label style={{ fontSize: '14px', color: '#D1D5DB', fontWeight: 600 }}>WhatsApp Message</label>
-                <span style={{ fontSize: '13px', color: message.length > 320 ? 'var(--color-red)' : '#9CA3AF' }}>
+                <span style={{ fontSize: '13px', color: message.length > 320 ? 'var(--err)' : '#9CA3AF' }}>
                   {message.length} / 320 characters
                 </span>
               </div>
@@ -116,7 +116,7 @@ export default function Comms() {
                 style={{ 
                   width: '100%', height: '160px', backgroundColor: '#222', border: '1px solid #333', 
                   borderRadius: '12px', padding: '16px', color: '#FFF', fontSize: '15px', 
-                  lineHeight: '1.5', fontFamily: 'var(--font-sans)', resize: 'vertical'
+                  lineHeight: '1.5', fontFamily: "Montserrat, sans-serif", resize: 'vertical'
                 }}
               />
             </div>
@@ -157,7 +157,7 @@ function ToggleSwitch({ isOn, onToggle }: { isOn: boolean, onToggle: () => void 
       onClick={onToggle}
       style={{
         width: '44px', height: '26px', borderRadius: '13px',
-        backgroundColor: isOn ? 'var(--color-mint)' : '#374151',
+        backgroundColor: isOn ? 'var(--err)' : '#374151',
         position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s'
       }}
     >

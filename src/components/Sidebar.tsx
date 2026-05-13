@@ -16,7 +16,7 @@ export default function Sidebar() {
   return (
     <aside style={{
       width: '260px',
-      backgroundColor: '#111111',
+      backgroundColor: 'var(--blk)',
       borderRight: '1px solid #222222',
       display: 'flex',
       flexDirection: 'column',
@@ -25,8 +25,8 @@ export default function Sidebar() {
       top: 0
     }}>
       <div style={{ padding: '24px', borderBottom: '1px solid #222222' }}>
-        <h2 style={{ fontSize: '24px', fontFamily: 'var(--font-serif)', margin: 0 }}>
-          Zaadi<span style={{ color: 'var(--color-mint)' }}>.</span> Ops
+        <h2 style={{ fontSize: '24px', fontFamily: "Montserrat, sans-serif", margin: 0 }}>
+          Zaadi<span style={{ color: 'var(--err)' }}>.</span> Ops
         </h2>
       </div>
       <nav style={{ padding: '16px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -42,12 +42,12 @@ export default function Sidebar() {
               borderRadius: '8px',
               textDecoration: 'none',
               color: isActive ? '#FFFFFF' : '#9CA3AF',
-              backgroundColor: isActive ? 'rgba(0, 200, 150, 0.1)' : 'transparent',
+              backgroundColor: isActive ? 'rgba(228,40,29,.10)' : 'transparent',
               fontWeight: isActive ? 600 : 500,
               transition: 'all 0.2s'
             })}
           >
-            <item.icon size={20} color={window.location.pathname === item.path ? 'var(--color-mint)' : 'currentColor'} />
+            <item.icon size={20} color={window.location.pathname === item.path ? 'var(--err)' : 'currentColor'} />
             {item.label}
           </NavLink>
         ))}

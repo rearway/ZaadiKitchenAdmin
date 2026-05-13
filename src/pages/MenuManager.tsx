@@ -43,7 +43,7 @@ export default function MenuManager() {
       
       {/* Header & Tabs */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ fontSize: '32px', fontFamily: 'var(--font-serif)', margin: 0 }}>Menu Manager</h1>
+        <h1 style={{ fontSize: '32px', fontFamily: "Montserrat, sans-serif", margin: 0 }}>Menu Manager</h1>
         
         <div style={{ display: 'flex', backgroundColor: '#1A1A1A', padding: '4px', borderRadius: '8px', border: '1px solid #333' }}>
           <TabButton active={activeTab === 'planner'} onClick={() => setActiveTab('planner')}>📅 Week Planner</TabButton>
@@ -56,7 +56,7 @@ export default function MenuManager() {
           {/* Week Navigation */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <button className="btn-ghost" style={{ padding: '8px 12px' }}>&lsaquo;</button>
-            <div style={{ backgroundColor: 'rgba(0, 200, 150, 0.1)', color: 'var(--color-mint)', padding: '8px 16px', borderRadius: '16px', fontWeight: 600 }}>
+            <div style={{ backgroundColor: 'rgba(228,40,29,.10)', color: 'var(--err)', padding: '8px 16px', borderRadius: '16px', fontWeight: 600 }}>
               Apr 7 – Apr 11, 2025
             </div>
             <button className="btn-ghost" style={{ padding: '8px 12px' }}>&rsaquo;</button>
@@ -66,7 +66,7 @@ export default function MenuManager() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {Object.entries(weekMeals).map(([day, dish]) => (
               <div key={day} style={{ display: 'flex', alignItems: 'center', gap: '24px', backgroundColor: '#1A1A1A', padding: '16px 24px', borderRadius: '12px', border: '1px solid #333' }}>
-                <div style={{ width: '60px', color: day === 'MON' ? 'var(--color-mint)' : '#9CA3AF', fontWeight: day === 'MON' ? 'bold' : 'normal' }}>
+                <div style={{ width: '60px', color: day === 'MON' ? 'var(--err)' : '#9CA3AF', fontWeight: day === 'MON' ? 'bold' : 'normal' }}>
                   {day}
                 </div>
                 
@@ -74,7 +74,7 @@ export default function MenuManager() {
                   {dish ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <div style={{ width: '44px', height: '44px', borderRadius: '8px', background: 'linear-gradient(135deg, #FF7340, #F5A623)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
+                        <div style={{ width: '44px', height: '44px', borderRadius: '8px', background: 'linear-gradient(135deg, #E4281D, #F5A623)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
                           {dish.type === 'Executive' ? '🍛' : '🥗'}
                         </div>
                         <div>
@@ -84,7 +84,7 @@ export default function MenuManager() {
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button className="btn-ghost" style={{ padding: '8px' }} onClick={() => setAssignModalOpen(day)}>✏️ Edit</button>
-                        <button className="btn-ghost" style={{ padding: '8px', color: dish.starred ? 'var(--color-lemon)' : '#9CA3AF' }}>⭐</button>
+                        <button className="btn-ghost" style={{ padding: '8px', color: dish.starred ? 'var(--err)' : '#9CA3AF' }}>⭐</button>
                       </div>
                     </div>
                   ) : (
@@ -94,7 +94,7 @@ export default function MenuManager() {
                         border: '1px dashed #444', borderRadius: '8px', padding: '16px', 
                         textAlign: 'center', color: '#9CA3AF', cursor: 'pointer', transition: 'border-color 0.2s'
                       }}
-                      onMouseOver={e => e.currentTarget.style.borderColor = 'var(--color-mint)'}
+                      onMouseOver={e => e.currentTarget.style.borderColor = 'var(--err)'}
                       onMouseOut={e => e.currentTarget.style.borderColor = '#444'}
                     >
                       + Add meal
@@ -108,7 +108,7 @@ export default function MenuManager() {
           {/* Publish Block */}
           <div style={{ marginTop: '16px', borderTop: '1px solid #333', paddingTop: '32px', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'flex-start' }}>
             {!canPublish && (
-              <div style={{ backgroundColor: 'rgba(245, 230, 66, 0.1)', color: 'var(--color-lemon)', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ backgroundColor: 'rgba(245, 230, 66, 0.1)', color: 'var(--err)', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span>⚠️</span> {missingDaysCount} days still need meals assigned before you can publish.
               </div>
             )}
@@ -142,11 +142,11 @@ export default function MenuManager() {
                 display: 'flex', alignItems: 'center', padding: '16px', backgroundColor: '#1A1A1A', 
                 borderRadius: '12px', border: '1px solid #333', opacity: dish.status === 'Draft' ? 0.5 : 1
               }}>
-                <span style={{ marginRight: '16px', color: dish.starred ? 'var(--color-lemon)' : '#444' }}>
+                <span style={{ marginRight: '16px', color: dish.starred ? 'var(--err)' : '#444' }}>
                   {dish.starred ? '⭐' : '☆'}
                 </span>
                 
-                <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'linear-gradient(135deg, #FF7340, #F5A623)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', marginRight: '16px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'linear-gradient(135deg, #E4281D, #F5A623)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', marginRight: '16px' }}>
                   {dish.type === 'Executive' ? '🍛' : '🥗'}
                 </div>
                 
@@ -158,8 +158,8 @@ export default function MenuManager() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
                   <span style={{ 
                     padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 600,
-                    backgroundColor: dish.status === 'Active' ? 'rgba(0, 200, 150, 0.1)' : 'transparent',
-                    color: dish.status === 'Active' ? 'var(--color-mint)' : '#6B7280',
+                    backgroundColor: dish.status === 'Active' ? 'rgba(228,40,29,.10)' : 'transparent',
+                    color: dish.status === 'Active' ? 'var(--err)' : '#6B7280',
                     border: dish.status === 'Draft' ? '1px solid #6B7280' : 'none'
                   }}>
                     {dish.status}
@@ -219,7 +219,7 @@ function AssignDishModal({ day, library, weekMeals, onClose, onAssign }: any) {
       <div style={{ backgroundColor: '#1A1A1A', width: '100%', maxWidth: '600px', borderRadius: '24px 24px 0 0', padding: '32px', position: 'relative', borderTop: '1px solid #333', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ width: '40px', height: '4px', backgroundColor: '#444', borderRadius: '2px', position: 'absolute', top: '12px', left: '50%', transform: 'translateX(-50%)' }} />
         
-        <h2 style={{ fontSize: '24px', fontFamily: 'var(--font-serif)', marginBottom: '4px' }}>Assign Dish</h2>
+        <h2 style={{ fontSize: '24px', fontFamily: "Montserrat, sans-serif", marginBottom: '4px' }}>Assign Dish</h2>
         <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '24px' }}>{day}, Apr 2025 — choose from your active meal library</p>
 
         <input 
@@ -240,12 +240,12 @@ function AssignDishModal({ day, library, weekMeals, onClose, onAssign }: any) {
                 onClick={() => !isUsed && setSelected(dish)}
                 style={{ 
                   display: 'flex', alignItems: 'center', padding: '16px', borderRadius: '12px', 
-                  border: `1px solid ${selected?.id === dish.id ? 'var(--color-mint)' : '#333'}`, 
+                  border: `1px solid ${selected?.id === dish.id ? 'var(--err)' : '#333'}`, 
                   backgroundColor: selected?.id === dish.id ? 'rgba(0, 200, 150, 0.05)' : '#222',
                   opacity: isUsed ? 0.45 : 1, cursor: isUsed ? 'not-allowed' : 'pointer'
                 }}
               >
-                <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'linear-gradient(135deg, #FF7340, #F5A623)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', marginRight: '16px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'linear-gradient(135deg, #E4281D, #F5A623)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', marginRight: '16px' }}>
                   {dish.type === 'Executive' ? '🍛' : '🥗'}
                 </div>
                 
@@ -255,10 +255,10 @@ function AssignDishModal({ day, library, weekMeals, onClose, onAssign }: any) {
                 </div>
 
                 {isUsed ? (
-                  <span style={{ color: 'var(--color-papaya)', fontSize: '13px', fontWeight: 600 }}>Already used — {usedDay}</span>
+                  <span style={{ color: 'var(--err)', fontSize: '13px', fontWeight: 600 }}>Already used — {usedDay}</span>
                 ) : (
-                  <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${selected?.id === dish.id ? 'var(--color-mint)' : '#666'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {selected?.id === dish.id && <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-mint)' }} />}
+                  <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${selected?.id === dish.id ? 'var(--err)' : '#666'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {selected?.id === dish.id && <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--err)' }} />}
                   </div>
                 )}
               </div>

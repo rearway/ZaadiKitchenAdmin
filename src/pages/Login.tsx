@@ -24,7 +24,7 @@ export default function Login() {
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: 'var(--color-ink)',
+      backgroundColor: 'var(--blk3)',
       position: 'relative',
       display: 'flex',
       alignItems: 'center',
@@ -66,7 +66,7 @@ export default function Login() {
         {/* Header */}
         <div style={{ textAlign: 'center' }}>
           <h1 style={{ fontSize: '32px', marginBottom: '8px' }}>
-            Zaadi<span style={{ color: 'var(--color-mint)' }}>.</span> Ops Portal
+            Zaadi<span style={{ color: 'var(--err)' }}>.</span> Ops Portal
           </h1>
           <p style={{ color: '#9CA3AF', fontSize: '14px' }}>Internal team access only</p>
         </div>
@@ -149,7 +149,7 @@ function RoleCard({ title, desc, selected, onClick }: { title: string, desc: str
       style={{
         padding: '16px',
         borderRadius: '12px',
-        border: `2px solid ${selected ? 'var(--color-mint)' : '#374151'}`,
+        border: `2px solid ${selected ? 'var(--err)' : '#374151'}`,
         backgroundColor: selected ? 'rgba(0, 200, 150, 0.05)' : 'transparent',
         cursor: 'pointer',
         transition: 'all 0.2s',
@@ -157,13 +157,13 @@ function RoleCard({ title, desc, selected, onClick }: { title: string, desc: str
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-        <h3 style={{ fontSize: '16px', fontFamily: 'var(--font-sans)', fontWeight: 600 }}>{title}</h3>
+        <h3 style={{ fontSize: '16px', fontFamily: "Montserrat, sans-serif", fontWeight: 600 }}>{title}</h3>
         <div style={{
           width: '18px', height: '18px', borderRadius: '50%',
-          border: `2px solid ${selected ? 'var(--color-mint)' : '#6B7280'}`,
+          border: `2px solid ${selected ? 'var(--err)' : '#6B7280'}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}>
-          {selected && <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-mint)' }} />}
+          {selected && <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--err)' }} />}
         </div>
       </div>
       <p style={{ fontSize: '13px', color: '#9CA3AF', lineHeight: '1.4' }}>{desc}</p>

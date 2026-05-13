@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const MOCK_LABELS = [
-  { id: '1', initial: 'A', color: 'var(--color-blue)', name: 'Ahmad Alsaud', location: 'Olaya Towers · Floor 14 · Desk 2', type: 'Executive' },
-  { id: '2', initial: 'S', color: 'var(--color-purple)', name: 'Sara Aljohani', location: 'KAFD Area 4 · Desk 2B', type: 'Salad' },
-  { id: '3', initial: 'K', color: 'var(--color-mint)', name: 'Khalid Alghamdi', location: 'Digital City · Bldg 3 · F2', type: 'Executive' },
+  { id: '1', initial: 'A', color: 'var(--ops)', name: 'Ahmad Alsaud', location: 'Olaya Towers · Floor 14 · Desk 2', type: 'Executive' },
+  { id: '2', initial: 'S', color: 'var(--ops)', name: 'Sara Aljohani', location: 'KAFD Area 4 · Desk 2B', type: 'Salad' },
+  { id: '3', initial: 'K', color: 'var(--err)', name: 'Khalid Alghamdi', location: 'Digital City · Bldg 3 · F2', type: 'Executive' },
 ];
 
 export default function PrintLabels() {
@@ -22,7 +22,7 @@ export default function PrintLabels() {
         <button className="btn-ghost" style={{ padding: '8px 12px' }} onClick={() => navigate(-1)}>&larr;</button>
         <div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
-            <h1 style={{ fontSize: '32px', fontFamily: 'var(--font-serif)', margin: 0 }}>Print Labels</h1>
+            <h1 style={{ fontSize: '32px', fontFamily: "Montserrat, sans-serif", margin: 0 }}>Print Labels</h1>
             <span style={{ color: '#9CA3AF', fontSize: '18px' }}>87 orders</span>
           </div>
           <p style={{ color: '#9CA3AF', fontSize: '14px', margin: 0, marginTop: '4px' }}>
@@ -70,7 +70,7 @@ export default function PrintLabels() {
               </div>
               <div style={{ color: '#9CA3AF', fontSize: '14px', flex: 1 }}>{label.location}</div>
               <div style={{ 
-                backgroundColor: 'rgba(0, 200, 150, 0.1)', color: 'var(--color-mint)', 
+                backgroundColor: 'rgba(228,40,29,.10)', color: 'var(--err)', 
                 padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 600,
                 width: '120px', textAlign: 'center'
               }}>
@@ -111,7 +111,7 @@ function LabelPreviewModal({ label, onClose }: any) {
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 style={{ fontSize: '24px', fontFamily: 'var(--font-serif)', margin: 0 }}>Label Preview</h2>
+            <h2 style={{ fontSize: '24px', fontFamily: "Montserrat, sans-serif", margin: 0 }}>Label Preview</h2>
             <p style={{ color: '#9CA3AF', margin: 0, fontSize: '14px' }}>Actual print size: 100×60mm</p>
           </div>
           <button className="btn-ghost" onClick={onClose} style={{ fontSize: '24px', padding: '8px' }}>&times;</button>
@@ -125,7 +125,7 @@ function LabelPreviewModal({ label, onClose }: any) {
         }}>
           {/* Sticker Header */}
           <div style={{ backgroundColor: '#1A1A1A', color: '#FFF', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '20px' }}>Zaadi<span style={{ color: 'var(--color-mint)' }}>.</span></div>
+            <div style={{ fontFamily: "Montserrat, sans-serif", fontSize: '20px' }}>Zaadi<span style={{ color: 'var(--err)' }}>.</span></div>
             <div style={{ fontSize: '12px', letterSpacing: '1px' }}>KITCHEN · FRESH DAILY LUNCH</div>
           </div>
           
@@ -138,7 +138,7 @@ function LabelPreviewModal({ label, onClose }: any) {
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto' }}>
               <div>
-                <div style={{ backgroundColor: 'var(--color-mint)', color: '#000', padding: '4px 12px', borderRadius: '4px', fontSize: '14px', fontWeight: 'bold', display: 'inline-block', marginBottom: '8px' }}>
+                <div style={{ backgroundColor: 'var(--err)', color: '#000', padding: '4px 12px', borderRadius: '4px', fontSize: '14px', fontWeight: 'bold', display: 'inline-block', marginBottom: '8px' }}>
                   {label.type === 'Executive' ? '🍛 Executive Meal' : '🥗 Salad Meal'}
                 </div>
                 <div style={{ fontSize: '12px', color: '#666' }}>Thursday, April 3, 2025 · Lunch delivery</div>
@@ -153,7 +153,7 @@ function LabelPreviewModal({ label, onClose }: any) {
 
         <div style={{ backgroundColor: '#1A1A1A', padding: '24px', borderRadius: '12px', border: '1px solid #333' }}>
           <button className="btn-primary" style={{ width: '100%', marginBottom: '16px', padding: '12px' }}>📥 Download this label</button>
-          <div style={{ backgroundColor: 'rgba(245, 230, 66, 0.1)', color: 'var(--color-lemon)', padding: '12px', borderRadius: '8px', fontSize: '13px', textAlign: 'center', marginBottom: '16px' }}>
+          <div style={{ backgroundColor: 'rgba(245, 230, 66, 0.1)', color: 'var(--err)', padding: '12px', borderRadius: '8px', fontSize: '13px', textAlign: 'center', marginBottom: '16px' }}>
             💡 Labels formatted for 100×60mm thermal sticker paper. Download as PDF and send to any thermal printer.
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '16px' }}>
