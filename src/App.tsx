@@ -13,6 +13,7 @@ import AreaManagement from './pages/AreaManagement';
 import PrintLabels from './pages/PrintLabels';
 import AddDish from './pages/AddDish';
 import AddArea from './pages/AddArea';
+import BuildingManagement from './pages/BuildingManagement';
 
 // Removed placeholder
 function App() {
@@ -32,6 +33,7 @@ function App() {
           <Route path="/comms" element={<Comms />} />
           <Route path="/areas" element={<AreaManagement />} />
           <Route path="/areas/new" element={<AddArea />} />
+          <Route path="/areas/:areaId/buildings" element={<BuildingManagement />} />
         </Route>
 
         {/* Redirect root to login for now */}

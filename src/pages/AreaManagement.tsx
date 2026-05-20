@@ -8,17 +8,15 @@ type Area = {
   name: string;
   status: AreaStatus;
   coverage: string;
-  distance: number;
   customers: number;
-  time: string;
   buildings: number;
 };
 
 const MOCK_AREAS: Area[] = [
-  { id: '1', name: 'Al Nakheel', status: 'Active', coverage: 'Northern Riyadh, bounded by King Salman Rd', distance: 3.2, customers: 32, time: '~25 min', buildings: 5 },
-  { id: '2', name: 'Olaya Business District', status: 'Active', coverage: 'King Fahad Rd corridor', distance: 1.8, customers: 85, time: '~15 min', buildings: 12 },
-  { id: '3', name: 'KAFD', status: 'Coming Soon', coverage: 'King Abdullah Financial District blocks 1-4', distance: 5.5, customers: 0, time: '~35 min', buildings: 0 },
-  { id: '4', name: 'Al Malaz', status: 'Paused', coverage: 'Central area offices', distance: 8.0, customers: 26, time: '~45 min', buildings: 3 }
+  { id: '1', name: 'Al Nakheel', status: 'Active', coverage: 'Offices & towers', customers: 28, buildings: 5 },
+  { id: '2', name: 'Olaya Business District', status: 'Active', coverage: 'Offices & towers', customers: 41, buildings: 12 },
+  { id: '3', name: 'Al Zahra', status: 'Coming Soon', coverage: 'Residential & offices', customers: 0, buildings: 0 },
+  { id: '4', name: 'Al Malaz', status: 'Paused', coverage: 'Central area offices', customers: 26, buildings: 3 },
 ];
 
 export default function AreaManagement() {
@@ -74,7 +72,7 @@ export default function AreaManagement() {
                   <h3 style={{ fontSize: '20px', fontWeight: 600, margin: 0 }}>{area.name}</h3>
                 </div>
                 <p style={{ color: '#9CA3AF', fontSize: '14px', margin: 0 }}>
-                  {area.coverage} · {area.distance} km · {area.customers} customers · {area.time} delivery
+                  {area.coverage} · {area.customers} customers
                 </p>
               </div>
               
@@ -101,7 +99,7 @@ export default function AreaManagement() {
                 <button className="btn-primary" style={{ padding: '8px 16px' }}>▶ Activate</button>
               )}
 
-              <button className="btn-primary" style={{ padding: '8px 16px', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button className="btn-primary" style={{ padding: '8px 16px', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => navigate(`/areas/${area.id}/buildings`)}>
                 🏢 Buildings &rarr;
               </button>
             </div>
