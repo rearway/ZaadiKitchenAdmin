@@ -1,28 +1,28 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
 
 :root {
-  --red:   #E4281D;
-  --redd:  #B52016;
-  --redm:  rgba(228,40,29,.15);
-  --redl:  rgba(228,40,29,.07);
+  --red: #e4281d;
+  --redd: #b52016;
+  --redm: rgba(228, 40, 29, 0.15);
+  --redl: rgba(228, 40, 29, 0.07);
 
-  --blk:   #000000;
-  --blk2:  #111111;
-  --blk3:  #1A1A1A;
+  --blk: #000000;
+  --blk2: #111111;
+  --blk3: #1a1a1a;
 
-  --mid:   #6B7280;
-  --soft:  #9CA3AF;
-  --border:#E5E7EB;
-  --bg:    #F9FAFB;
+  --mid: #6b7280;
+  --soft: #9ca3af;
+  --border: #e5e7eb;
+  --bg: #f9fafb;
   --white: #ffffff;
 
-  --ops:   #374151;
-  --opsl:  rgba(55,65,81,.08);
+  --ops: #374151;
+  --opsl: rgba(55, 65, 81, 0.08);
 
-  --grn:   #16A34A;
-  --grnl:  #DCFCE7;
-  --err:   #DC2626;
-  --errl:  #FEF2F2;
+  --grn: #16a34a;
+  --grnl: #dcfce7;
+  --err: #dc2626;
+  --errl: #fef2f2;
 }
 
 * {
@@ -34,11 +34,16 @@
 body {
   font-family: 'Montserrat', sans-serif;
   background-color: var(--blk3);
-  color: #FFFFFF;
+  color: #ffffff;
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: 'Montserrat', sans-serif;
 }
 
@@ -51,7 +56,7 @@ button {
 
 .btn-primary {
   background-color: var(--err);
-  color: #FFFFFF;
+  color: #ffffff;
   padding: 12px 24px;
   border-radius: 8px;
   font-weight: 600;
@@ -64,20 +69,20 @@ button {
 
 .btn-ghost {
   background-color: transparent;
-  color: #9CA3AF;
+  color: #9ca3af;
   padding: 12px 24px;
   border-radius: 8px;
   font-weight: 600;
 }
 
 .btn-ghost:hover {
-  color: #FFFFFF;
+  color: #ffffff;
   background-color: rgba(255, 255, 255, 0.1);
 }
 
 .btn-disabled {
-  background-color: #E5E7EB;
-  color: #9CA3AF;
+  background-color: #e5e7eb;
+  color: #9ca3af;
   cursor: not-allowed;
 }
 

@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 
@@ -21,7 +20,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        
+
         <Route element={<DashboardLayout />}>
           <Route path="/dashboard" element={<DashboardHome />} />
           <Route path="/ops" element={<DailyOps />} />
