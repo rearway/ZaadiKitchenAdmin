@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 type Dish = {
@@ -360,7 +360,13 @@ export default function MenuManager() {
   );
 }
 
-function TabButton({ active, onClick, children }: any) {
+type TabButtonProps = {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+};
+
+function TabButton({ active, onClick, children }: TabButtonProps) {
   return (
     <button
       onClick={onClick}
@@ -379,18 +385,29 @@ function TabButton({ active, onClick, children }: any) {
   );
 }
 
-function AssignDishModal({ day, library, weekMeals, onClose, onAssign }: any) {
+type AssignDishModalProps = {
+  day: string;
+  library: Dish[];
+  weekMeals: Record<string, Dish | null>;
+  onClose: () => void;
+  onAssign: (dish: Dish) => void;
+};
+
+function AssignDishModal({ day, library, weekMeals, onClose, onAssign }: AssignDishModalProps) {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Dish | null>(null);
 
   // Check which dishes are already assigned to other days
-  const assignedDishes = Object.entries(weekMeals).reduce((acc: any, [d, dish]: any) => {
-    if (dish && d !== day) acc[dish.id] = d;
-    return acc;
-  }, {});
+  const assignedDishes = Object.entries(weekMeals).reduce<Record<string, string>>(
+    (acc, [d, dish]) => {
+      if (dish && d !== day) acc[dish.id] = d;
+      return acc;
+    },
+    {}
+  );
 
   const filtered = library.filter(
-    (d: Dish) => d.name.toLowerCase().includes(search.toLowerCase()) && d.status === 'Active'
+    (d) => d.name.toLowerCase().includes(search.toLowerCase()) && d.status === 'Active'
   );
 
   return (
@@ -458,7 +475,7 @@ function AssignDishModal({ day, library, weekMeals, onClose, onAssign }: any) {
             paddingRight: '8px',
           }}
         >
-          {filtered.map((dish: Dish) => {
+          {filtered.map((dish) => {
             const usedDay = assignedDishes[dish.id];
             const isUsed = !!usedDay;
             return (

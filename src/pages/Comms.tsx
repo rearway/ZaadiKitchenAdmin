@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 
 const AUTOMATIONS = [
   {
@@ -291,7 +291,13 @@ export default function Comms() {
   );
 }
 
-function TabButton({ active, onClick, children }: any) {
+type TabButtonProps = {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+};
+
+function TabButton({ active, onClick, children }: TabButtonProps) {
   return (
     <button
       onClick={onClick}

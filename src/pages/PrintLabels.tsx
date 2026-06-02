@@ -1,7 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const MOCK_LABELS = [
+type PrintLabel = {
+  id: string;
+  initial: string;
+  color: string;
+  name: string;
+  location: string;
+  type: 'Executive' | 'Salad';
+};
+
+const MOCK_LABELS: PrintLabel[] = [
   {
     id: '1',
     initial: 'A',
@@ -31,7 +40,7 @@ const MOCK_LABELS = [
 export default function PrintLabels() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState('All');
-  const [previewLabel, setPreviewLabel] = useState<any>(null);
+  const [previewLabel, setPreviewLabel] = useState<PrintLabel | null>(null);
 
   const filteredLabels = MOCK_LABELS.filter((l) => filter === 'All' || l.type === filter);
 
@@ -232,7 +241,12 @@ export default function PrintLabels() {
   );
 }
 
-function LabelPreviewModal({ label, onClose }: any) {
+type LabelPreviewModalProps = {
+  label: PrintLabel;
+  onClose: () => void;
+};
+
+function LabelPreviewModal({ label, onClose }: LabelPreviewModalProps) {
   return (
     <div
       style={{

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 
 type Issue = {
@@ -486,12 +486,21 @@ function StatusLine({ status }: { status: 'active' | 'pending' }) {
 }
 
 // Modals
-function CreditModal({ issue, amount, setAmount, onClose, onConfirm }: any) {
+
+type CreditModalProps = {
+  issue: Issue;
+  amount: string;
+  setAmount: (v: string) => void;
+  onClose: () => void;
+  onConfirm: () => void;
+};
+
+function CreditModal({ issue, amount, setAmount, onClose, onConfirm }: CreditModalProps) {
   const numAmount = parseFloat(amount || '0');
   const isError = numAmount > 30;
 
   return (
-    <ModalOverlay onClose={onClose}>
+    <ModalOverlay>
       <h2 style={{ fontSize: '24px', fontFamily: 'Montserrat, sans-serif', marginBottom: '8px' }}>
         Credit Wallet
       </h2>
@@ -590,7 +599,15 @@ function CreditModal({ issue, amount, setAmount, onClose, onConfirm }: any) {
   );
 }
 
-function RejectModal({ issue, reason, setReason, onClose, onConfirm }: any) {
+type RejectModalProps = {
+  issue: Issue;
+  reason: string;
+  setReason: (v: string) => void;
+  onClose: () => void;
+  onConfirm: () => void;
+};
+
+function RejectModal({ issue, reason, setReason, onClose, onConfirm }: RejectModalProps) {
   const options = [
     { id: '1', title: 'Not a valid issue', desc: 'Issue does not meet support criteria' },
     { id: '2', title: 'Duplicate report', desc: 'Same issue already reported and actioned' },
@@ -598,7 +615,7 @@ function RejectModal({ issue, reason, setReason, onClose, onConfirm }: any) {
   ];
 
   return (
-    <ModalOverlay onClose={onClose}>
+    <ModalOverlay>
       <h2
         style={{
           fontSize: '24px',
@@ -686,7 +703,7 @@ function RejectModal({ issue, reason, setReason, onClose, onConfirm }: any) {
   );
 }
 
-function ModalOverlay({ children }: any) {
+function ModalOverlay({ children }: { children: ReactNode }) {
   return (
     <div
       style={{

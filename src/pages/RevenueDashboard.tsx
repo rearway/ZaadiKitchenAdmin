@@ -246,7 +246,14 @@ export default function RevenueDashboard() {
 
 // Sub-components
 
-function StatTile({ label, value, color = '#FFF', onClick }: any) {
+type StatTileProps = {
+  label: string;
+  value: string;
+  color?: string;
+  onClick: () => void;
+};
+
+function StatTile({ label, value, color = '#FFF', onClick }: StatTileProps) {
   return (
     <div
       onClick={onClick}
@@ -271,7 +278,14 @@ function StatTile({ label, value, color = '#FFF', onClick }: any) {
   );
 }
 
-function BarChartCol({ day, height, opacity, today }: any) {
+type BarChartColProps = {
+  day: string;
+  height: string;
+  opacity: number;
+  today?: boolean;
+};
+
+function BarChartCol({ day, height, opacity, today }: BarChartColProps) {
   return (
     <div
       style={{
@@ -319,7 +333,14 @@ function BarChartCol({ day, height, opacity, today }: any) {
   );
 }
 
-function HorizontalBar({ label, count, width, color }: any) {
+type HorizontalBarProps = {
+  label: string;
+  count: number;
+  width: string;
+  color: string;
+};
+
+function HorizontalBar({ label, count, width, color }: HorizontalBarProps) {
   const navigate = useNavigate();
   return (
     <div

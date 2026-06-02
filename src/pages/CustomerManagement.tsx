@@ -320,7 +320,14 @@ export default function CustomerManagement() {
   );
 }
 
-function InfoCard({ label, value, sub, valueColor = '#FFF' }: any) {
+type InfoCardProps = {
+  label: string;
+  value: string;
+  sub: string;
+  valueColor?: string;
+};
+
+function InfoCard({ label, value, sub, valueColor = '#FFF' }: InfoCardProps) {
   return (
     <div
       style={{
