@@ -1,23 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-type Role = 'Admin' | 'Ops';
-
 export default function Login() {
-  const [selectedRole, setSelectedRole] = useState<Role>('Admin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
+  // TODO[auth]: replace with real POST /auth/admin/login in Phase 3
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (email && password) {
-      localStorage.setItem('userRole', selectedRole);
-      if (selectedRole === 'Admin') {
-        navigate('/dashboard');
-      } else if (selectedRole === 'Ops') {
-        navigate('/ops');
-      }
+      localStorage.setItem('userRole', 'Admin');
+      navigate('/dashboard');
     }
   };
 
@@ -92,9 +86,9 @@ export default function Login() {
           }}
         >
           <div>
-            <h2 style={{ fontSize: '24px', marginBottom: '8px' }}>Sign in as...</h2>
+            <h2 style={{ fontSize: '24px', marginBottom: '8px' }}>Sign in</h2>
             <p style={{ color: '#9CA3AF', fontSize: '14px', lineHeight: '1.5' }}>
-              Select your role. Your dashboard and permissions will be set accordingly.
+              Administrator access only.
             </p>
           </div>
 
@@ -102,23 +96,7 @@ export default function Login() {
             onSubmit={handleLogin}
             style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
           >
-            {/* Role Selection */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <RoleCard
-                title="👑 Administrator"
-                desc="Full access — revenue, pricing, all reports, customer management, team roles."
-                selected={selectedRole === 'Admin'}
-                onClick={() => setSelectedRole('Admin')}
-              />
-              <RoleCard
-                title="🍳 Ops / Kitchen"
-                desc="Daily ops, production tracking, label printing. No access to revenue, menu, or customer data."
-                selected={selectedRole === 'Ops'}
-                onClick={() => setSelectedRole('Ops')}
-              />
-            </div>
-
-            {/* Email & Password Input */}
+            {/* Email & Password */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <label style={{ fontSize: '14px', color: '#D1D5DB', fontWeight: 500 }}>
@@ -150,74 +128,11 @@ export default function Login() {
             </div>
 
             <button type="submit" className="btn-primary" style={{ marginTop: '8px' }}>
-              Sign in as {selectedRole === 'Admin' ? 'Administrator' : 'Ops / Kitchen'} &rarr;
+              Sign in &rarr;
             </button>
           </form>
         </div>
       </div>
-    </div>
-  );
-}
-
-function RoleCard({
-  title,
-  desc,
-  selected,
-  onClick,
-}: {
-  title: string;
-  desc: string;
-  selected: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        padding: '16px',
-        borderRadius: '12px',
-        border: `2px solid ${selected ? 'var(--err)' : '#374151'}`,
-        backgroundColor: selected ? 'rgba(0, 200, 150, 0.05)' : 'transparent',
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-        position: 'relative',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '4px',
-        }}
-      >
-        <h3 style={{ fontSize: '16px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>
-          {title}
-        </h3>
-        <div
-          style={{
-            width: '18px',
-            height: '18px',
-            borderRadius: '50%',
-            border: `2px solid ${selected ? 'var(--err)' : '#6B7280'}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {selected && (
-            <div
-              style={{
-                width: '10px',
-                height: '10px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--err)',
-              }}
-            />
-          )}
-        </div>
-      </div>
-      <p style={{ fontSize: '13px', color: '#9CA3AF', lineHeight: '1.4' }}>{desc}</p>
     </div>
   );
 }
