@@ -4,7 +4,7 @@ const AUTOMATIONS = [
   {
     id: '1',
     icon: '✅',
-    color: 'var(--err)',
+    color: 'var(--danger)',
     name: 'Delivery Confirmed',
     desc: 'Mark as Delivered tap → WhatsApp to customer',
     defaultOn: true,
@@ -12,7 +12,7 @@ const AUTOMATIONS = [
   {
     id: '2',
     icon: '⭐',
-    color: 'var(--err)',
+    color: 'var(--danger)',
     name: 'End-of-Day Feedback',
     desc: '3:00 PM daily → all meal recipients',
     defaultOn: true,
@@ -28,7 +28,7 @@ const AUTOMATIONS = [
   {
     id: '4',
     icon: '🎁',
-    color: 'var(--err)',
+    color: 'var(--danger)',
     name: 'Referral Reward',
     desc: "Referred friend's plan activates",
     defaultOn: true,
@@ -194,10 +194,10 @@ export default function Comms() {
                     onClick={() => setSegment(seg)}
                     style={{
                       backgroundColor: segment === seg ? 'rgba(228,40,29,.10)' : '#222',
-                      color: segment === seg ? 'var(--err)' : '#9CA3AF',
+                      color: segment === seg ? 'var(--danger)' : '#9CA3AF',
                       padding: '8px 20px',
                       borderRadius: '24px',
-                      border: `1px solid ${segment === seg ? 'var(--err)' : '#333'}`,
+                      border: `1px solid ${segment === seg ? 'var(--danger)' : '#333'}`,
                       fontSize: '14px',
                       fontWeight: segment === seg ? 600 : 400,
                     }}
@@ -211,7 +211,7 @@ export default function Comms() {
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  backgroundColor: 'var(--err)',
+                  backgroundColor: 'var(--danger)',
                   color: '#000',
                   padding: '6px 12px',
                   borderRadius: '8px',
@@ -239,7 +239,7 @@ export default function Comms() {
                 <span
                   style={{
                     fontSize: '13px',
-                    color: message.length > 320 ? 'var(--err)' : '#9CA3AF',
+                    color: message.length > 320 ? 'var(--danger)' : '#9CA3AF',
                   }}
                 >
                   {message.length} / 320 characters
@@ -318,7 +318,7 @@ function ToggleSwitch({ isOn, onToggle }: { isOn: boolean; onToggle: () => void 
         width: '44px',
         height: '26px',
         borderRadius: '13px',
-        backgroundColor: isOn ? 'var(--err)' : '#374151',
+        backgroundColor: isOn ? 'var(--danger)' : '#374151',
         position: 'relative',
         cursor: 'pointer',
         transition: 'background-color 0.2s',

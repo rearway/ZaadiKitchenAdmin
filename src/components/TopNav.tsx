@@ -23,7 +23,7 @@ export default function TopNav({ role }: { role: string }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         {role !== 'Admin' && (
           <h2 style={{ fontSize: '24px', fontFamily: 'Montserrat, sans-serif', margin: 0 }}>
-            Zaadi<span style={{ color: 'var(--err)' }}>.</span> Ops
+            Zaadi<span style={{ color: 'var(--danger)' }}>.</span> Ops
           </h2>
         )}
       </div>
@@ -34,7 +34,7 @@ export default function TopNav({ role }: { role: string }) {
             width: '36px',
             height: '36px',
             borderRadius: '50%',
-            backgroundColor: 'var(--err)',
+            backgroundColor: 'var(--danger)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

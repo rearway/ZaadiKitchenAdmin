@@ -45,7 +45,7 @@ const MOCK_CUSTOMERS: Customer[] = [
     id: '3',
     name: 'Khalid Alghamdi',
     initial: 'K',
-    color: 'var(--err)',
+    color: 'var(--danger)',
     plan: 'Weekly',
     status: 'Paused',
     phone: '+966 561234567',
@@ -88,13 +88,13 @@ export default function CustomerManagement() {
   const getPlanColor = (plan: string) => {
     switch (plan) {
       case 'Month':
-        return 'var(--err)';
+        return 'var(--danger)';
       case 'Weekly':
-        return 'var(--err)';
+        return 'var(--danger)';
       case 'Quarterly':
         return 'var(--ops)';
       case 'Try It':
-        return 'var(--err)';
+        return 'var(--danger)';
       default:
         return '#FFF';
     }
@@ -103,12 +103,12 @@ export default function CustomerManagement() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Active':
-        return { bg: 'rgba(228,40,29,.10)', color: 'var(--err)' };
+        return { bg: 'rgba(228,40,29,.10)', color: 'var(--danger)' };
       case 'Paused':
         return { bg: 'rgba(139, 92, 246, 0.1)', color: 'var(--ops)' };
       case 'Expired':
       case 'Churned':
-        return { bg: 'rgba(255, 115, 64, 0.1)', color: 'var(--err)' };
+        return { bg: 'rgba(255, 115, 64, 0.1)', color: 'var(--danger)' };
       default:
         return { bg: '#333', color: '#FFF' };
     }
@@ -174,7 +174,7 @@ export default function CustomerManagement() {
                 opacity: isChurned ? 0.6 : 1,
                 overflow: 'hidden',
                 transition: 'all 0.2s',
-                borderLeft: isExpanded ? '4px solid var(--err)' : '1px solid #333',
+                borderLeft: isExpanded ? '4px solid var(--danger)' : '1px solid #333',
               }}
             >
               {/* Collapsed Row */}
@@ -279,7 +279,7 @@ export default function CustomerManagement() {
                       label="Wallet"
                       value={c.wallet}
                       sub="Credit balance"
-                      valueColor="var(--err)"
+                      valueColor="var(--danger)"
                     />
                     <InfoCard
                       label="Address"

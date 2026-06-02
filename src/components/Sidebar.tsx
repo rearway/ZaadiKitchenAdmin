@@ -35,7 +35,7 @@ export default function Sidebar() {
     >
       <div style={{ padding: '24px', borderBottom: '1px solid #222222' }}>
         <h2 style={{ fontSize: '24px', fontFamily: 'Montserrat, sans-serif', margin: 0 }}>
-          Zaadi<span style={{ color: 'var(--err)' }}>.</span> Ops
+          Zaadi<span style={{ color: 'var(--danger)' }}>.</span> Ops
         </h2>
       </div>
       <nav
@@ -66,7 +66,7 @@ export default function Sidebar() {
           >
             <item.icon
               size={20}
-              color={window.location.pathname === item.path ? 'var(--err)' : 'currentColor'}
+              color={window.location.pathname === item.path ? 'var(--danger)' : 'currentColor'}
             />
             {item.label}
           </NavLink>

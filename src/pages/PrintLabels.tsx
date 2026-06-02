@@ -21,7 +21,7 @@ const MOCK_LABELS = [
   {
     id: '3',
     initial: 'K',
-    color: 'var(--err)',
+    color: 'var(--danger)',
     name: 'Khalid Alghamdi',
     location: 'Digital City · Bldg 3 · F2',
     type: 'Executive',
@@ -148,7 +148,7 @@ export default function PrintLabels() {
               <div
                 style={{
                   backgroundColor: 'rgba(228,40,29,.10)',
-                  color: 'var(--err)',
+                  color: 'var(--danger)',
                   padding: '4px 8px',
                   borderRadius: '4px',
                   fontSize: '12px',
@@ -298,7 +298,7 @@ function LabelPreviewModal({ label, onClose }: any) {
             }}
           >
             <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '20px' }}>
-              Zaadi<span style={{ color: 'var(--err)' }}>.</span>
+              Zaadi<span style={{ color: 'var(--danger)' }}>.</span>
             </div>
             <div style={{ fontSize: '12px', letterSpacing: '1px' }}>
               KITCHEN · FRESH DAILY LUNCH
@@ -331,7 +331,7 @@ function LabelPreviewModal({ label, onClose }: any) {
               <div>
                 <div
                   style={{
-                    backgroundColor: 'var(--err)',
+                    backgroundColor: 'var(--danger)',
                     color: '#000',
                     padding: '4px 12px',
                     borderRadius: '4px',
@@ -381,7 +381,7 @@ function LabelPreviewModal({ label, onClose }: any) {
           <div
             style={{
               backgroundColor: 'rgba(245, 230, 66, 0.1)',
-              color: 'var(--err)',
+              color: 'var(--danger)',
               padding: '12px',
               borderRadius: '8px',
               fontSize: '13px',

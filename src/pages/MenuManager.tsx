@@ -98,7 +98,7 @@ export default function MenuManager() {
             <div
               style={{
                 backgroundColor: 'rgba(228,40,29,.10)',
-                color: 'var(--err)',
+                color: 'var(--danger)',
                 padding: '8px 16px',
                 borderRadius: '16px',
                 fontWeight: 600,
@@ -129,7 +129,7 @@ export default function MenuManager() {
                 <div
                   style={{
                     width: '60px',
-                    color: day === 'MON' ? 'var(--err)' : '#9CA3AF',
+                    color: day === 'MON' ? 'var(--danger)' : '#9CA3AF',
                     fontWeight: day === 'MON' ? 'bold' : 'normal',
                   }}
                 >
@@ -179,7 +179,10 @@ export default function MenuManager() {
                         </button>
                         <button
                           className="btn-ghost"
-                          style={{ padding: '8px', color: dish.starred ? 'var(--err)' : '#9CA3AF' }}
+                          style={{
+                            padding: '8px',
+                            color: dish.starred ? 'var(--danger)' : '#9CA3AF',
+                          }}
                         >
                           ⭐
                         </button>
@@ -197,7 +200,7 @@ export default function MenuManager() {
                         cursor: 'pointer',
                         transition: 'border-color 0.2s',
                       }}
-                      onMouseOver={(e) => (e.currentTarget.style.borderColor = 'var(--err)')}
+                      onMouseOver={(e) => (e.currentTarget.style.borderColor = 'var(--danger)')}
                       onMouseOut={(e) => (e.currentTarget.style.borderColor = '#444')}
                     >
                       + Add meal
@@ -224,7 +227,7 @@ export default function MenuManager() {
               <div
                 style={{
                   backgroundColor: 'rgba(245, 230, 66, 0.1)',
-                  color: 'var(--err)',
+                  color: 'var(--danger)',
                   padding: '12px 16px',
                   borderRadius: '8px',
                   fontSize: '14px',
@@ -282,7 +285,9 @@ export default function MenuManager() {
                   opacity: dish.status === 'Draft' ? 0.5 : 1,
                 }}
               >
-                <span style={{ marginRight: '16px', color: dish.starred ? 'var(--err)' : '#444' }}>
+                <span
+                  style={{ marginRight: '16px', color: dish.starred ? 'var(--danger)' : '#444' }}
+                >
                   {dish.starred ? '⭐' : '☆'}
                 </span>
 
@@ -318,7 +323,7 @@ export default function MenuManager() {
                       fontWeight: 600,
                       backgroundColor:
                         dish.status === 'Active' ? 'rgba(228,40,29,.10)' : 'transparent',
-                      color: dish.status === 'Active' ? 'var(--err)' : '#6B7280',
+                      color: dish.status === 'Active' ? 'var(--danger)' : '#6B7280',
                       border: dish.status === 'Draft' ? '1px solid #6B7280' : 'none',
                     }}
                   >
@@ -465,7 +470,7 @@ function AssignDishModal({ day, library, weekMeals, onClose, onAssign }: any) {
                   alignItems: 'center',
                   padding: '16px',
                   borderRadius: '12px',
-                  border: `1px solid ${selected?.id === dish.id ? 'var(--err)' : '#333'}`,
+                  border: `1px solid ${selected?.id === dish.id ? 'var(--danger)' : '#333'}`,
                   backgroundColor: selected?.id === dish.id ? 'rgba(0, 200, 150, 0.05)' : '#222',
                   opacity: isUsed ? 0.45 : 1,
                   cursor: isUsed ? 'not-allowed' : 'pointer',
@@ -495,7 +500,7 @@ function AssignDishModal({ day, library, weekMeals, onClose, onAssign }: any) {
                 </div>
 
                 {isUsed ? (
-                  <span style={{ color: 'var(--err)', fontSize: '13px', fontWeight: 600 }}>
+                  <span style={{ color: 'var(--danger)', fontSize: '13px', fontWeight: 600 }}>
                     Already used — {usedDay}
                   </span>
                 ) : (
@@ -504,7 +509,7 @@ function AssignDishModal({ day, library, weekMeals, onClose, onAssign }: any) {
                       width: '20px',
                       height: '20px',
                       borderRadius: '50%',
-                      border: `2px solid ${selected?.id === dish.id ? 'var(--err)' : '#666'}`,
+                      border: `2px solid ${selected?.id === dish.id ? 'var(--danger)' : '#666'}`,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -516,7 +521,7 @@ function AssignDishModal({ day, library, weekMeals, onClose, onAssign }: any) {
                           width: '10px',
                           height: '10px',
                           borderRadius: '50%',
-                          backgroundColor: 'var(--err)',
+                          backgroundColor: 'var(--danger)',
                         }}
                       />
                     )}

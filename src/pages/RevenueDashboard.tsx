@@ -56,7 +56,7 @@ export default function RevenueDashboard() {
           <div
             style={{
               backgroundColor: 'rgba(0, 200, 150, 0.15)',
-              color: 'var(--err)',
+              color: 'var(--danger)',
               padding: '4px 12px',
               borderRadius: '16px',
               fontSize: '14px',
@@ -78,13 +78,13 @@ export default function RevenueDashboard() {
           <StatTile
             label="NEW TODAY"
             value="14"
-            color="var(--err)"
+            color="var(--danger)"
             onClick={() => navigate('/customers?filter=new')}
           />
           <StatTile
             label="CHURNED"
             value="3"
-            color="var(--err)"
+            color="var(--danger)"
             onClick={() => navigate('/customers?filter=churned')}
           />
         </div>
@@ -166,10 +166,10 @@ export default function RevenueDashboard() {
           </h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <HorizontalBar label="Month" count={129} width="52%" color="var(--err)" />
+            <HorizontalBar label="Month" count={129} width="52%" color="var(--danger)" />
             <HorizontalBar label="Weekly" count={70} width="28%" color="var(--red)" />
             <HorizontalBar label="Quarterly" count={35} width="14%" color="var(--ops)" />
-            <HorizontalBar label="Try It" count={14} width="6%" color="var(--err)" />
+            <HorizontalBar label="Try It" count={14} width="6%" color="var(--danger)" />
           </div>
         </div>
       </div>
@@ -199,7 +199,7 @@ export default function RevenueDashboard() {
               style={{
                 fontSize: '32px',
                 fontFamily: 'Montserrat, sans-serif',
-                color: 'var(--err)',
+                color: 'var(--danger)',
               }}
             >
               1.4
@@ -231,7 +231,7 @@ export default function RevenueDashboard() {
               style={{
                 fontSize: '32px',
                 fontFamily: 'Montserrat, sans-serif',
-                color: 'var(--err)',
+                color: 'var(--danger)',
               }}
             >
               34%
@@ -296,7 +296,7 @@ function BarChartCol({ day, height, opacity, today }: any) {
           style={{
             width: '60%',
             height: height,
-            backgroundColor: 'var(--err)',
+            backgroundColor: 'var(--danger)',
             opacity,
             borderRadius: '4px 4px 0 0',
             minHeight: height === '0%' ? '2px' : height,

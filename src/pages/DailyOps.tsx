@@ -96,7 +96,7 @@ export default function DailyOps() {
               </span>
               <span
                 style={{
-                  color: 'var(--err)',
+                  color: 'var(--danger)',
                   fontSize: '13px',
                   fontWeight: 600,
                   display: 'flex',
@@ -109,7 +109,7 @@ export default function DailyOps() {
                   style={{
                     width: '8px',
                     height: '8px',
-                    backgroundColor: 'var(--err)',
+                    backgroundColor: 'var(--danger)',
                     borderRadius: '50%',
                     display: 'inline-block',
                   }}
@@ -121,7 +121,7 @@ export default function DailyOps() {
 
           <div style={{ display: 'flex', gap: '24px' }}>
             <StatBox label="MEALS" value="87" />
-            <StatBox label="ISSUES" value={issues.length.toString()} color="var(--err)" />
+            <StatBox label="ISSUES" value={issues.length.toString()} color="var(--danger)" />
             <StatBox label="SKIPPED" value="12" />
           </div>
         </div>
@@ -253,7 +253,7 @@ export default function DailyOps() {
                       display: 'inline-block',
                       padding: '4px 8px',
                       backgroundColor: 'rgba(255, 115, 64, 0.1)',
-                      color: 'var(--err)',
+                      color: 'var(--danger)',
                       borderRadius: '6px',
                       fontSize: '13px',
                       fontWeight: 600,
@@ -306,8 +306,8 @@ export default function DailyOps() {
                         <button
                           style={{
                             backgroundColor: 'transparent',
-                            color: 'var(--err)',
-                            border: '1px solid var(--err)',
+                            color: 'var(--danger)',
+                            border: '1px solid var(--danger)',
                             padding: '8px 16px',
                             borderRadius: '8px',
                             fontWeight: 600,
@@ -448,7 +448,7 @@ function StatusStep({
           width: '40px',
           height: '40px',
           borderRadius: '50%',
-          backgroundColor: isCompleted ? 'var(--err)' : isActive ? 'var(--err)' : '#333',
+          backgroundColor: isCompleted ? 'var(--danger)' : isActive ? 'var(--danger)' : '#333',
           color: isCompleted ? '#000' : '#FFF',
           display: 'flex',
           alignItems: 'center',
@@ -478,7 +478,7 @@ function StatusLine({ status }: { status: 'active' | 'pending' }) {
       style={{
         flex: 1,
         height: '2px',
-        backgroundColor: status === 'active' ? 'var(--err)' : '#333',
+        backgroundColor: status === 'active' ? 'var(--danger)' : '#333',
         transform: 'translateY(-16px)',
       }}
     />
@@ -523,7 +523,7 @@ function CreditModal({ issue, amount, setAmount, onClose, onConfirm }: any) {
               fontSize: '32px',
               padding: '16px 16px 16px 64px',
               textAlign: 'center',
-              borderColor: isError ? 'var(--err)' : '#374151',
+              borderColor: isError ? 'var(--danger)' : '#374151',
             }}
             placeholder="0"
           />
@@ -534,7 +534,7 @@ function CreditModal({ issue, amount, setAmount, onClose, onConfirm }: any) {
         <div
           style={{
             backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            color: 'var(--err)',
+            color: 'var(--danger)',
             padding: '12px',
             borderRadius: '8px',
             fontSize: '14px',
@@ -604,7 +604,7 @@ function RejectModal({ issue, reason, setReason, onClose, onConfirm }: any) {
           fontSize: '24px',
           fontFamily: 'Montserrat, sans-serif',
           marginBottom: '8px',
-          color: 'var(--err)',
+          color: 'var(--danger)',
         }}
       >
         Reject Issue
@@ -622,7 +622,7 @@ function RejectModal({ issue, reason, setReason, onClose, onConfirm }: any) {
             style={{
               padding: '16px',
               borderRadius: '8px',
-              border: `1px solid ${reason === opt.id ? 'var(--err)' : '#333'}`,
+              border: `1px solid ${reason === opt.id ? 'var(--danger)' : '#333'}`,
               backgroundColor: reason === opt.id ? 'rgba(239, 68, 68, 0.05)' : '#222',
               cursor: 'pointer',
             }}
@@ -633,7 +633,7 @@ function RejectModal({ issue, reason, setReason, onClose, onConfirm }: any) {
                   width: '18px',
                   height: '18px',
                   borderRadius: '50%',
-                  border: `2px solid ${reason === opt.id ? 'var(--err)' : '#666'}`,
+                  border: `2px solid ${reason === opt.id ? 'var(--danger)' : '#666'}`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -645,7 +645,7 @@ function RejectModal({ issue, reason, setReason, onClose, onConfirm }: any) {
                       width: '10px',
                       height: '10px',
                       borderRadius: '50%',
-                      backgroundColor: 'var(--err)',
+                      backgroundColor: 'var(--danger)',
                     }}
                   />
                 )}
@@ -670,7 +670,7 @@ function RejectModal({ issue, reason, setReason, onClose, onConfirm }: any) {
         <button
           style={{
             flex: 2,
-            backgroundColor: 'var(--err)',
+            backgroundColor: 'var(--danger)',
             color: '#FFF',
             padding: '12px',
             borderRadius: '8px',

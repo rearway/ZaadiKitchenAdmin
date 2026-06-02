@@ -57,11 +57,11 @@ export default function AreaManagement() {
   const getStatusColor = (status: AreaStatus) => {
     switch (status) {
       case 'Active':
-        return 'var(--err)';
+        return 'var(--danger)';
       case 'Coming Soon':
-        return 'var(--err)';
+        return 'var(--danger)';
       case 'Paused':
-        return 'var(--err)';
+        return 'var(--danger)';
     }
   };
 
@@ -173,7 +173,7 @@ export default function AreaManagement() {
                   className="btn-ghost"
                   style={{
                     backgroundColor: 'rgba(255, 115, 64, 0.1)',
-                    color: 'var(--err)',
+                    color: 'var(--danger)',
                     padding: '8px 16px',
                   }}
                 >

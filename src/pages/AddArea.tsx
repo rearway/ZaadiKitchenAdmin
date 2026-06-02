@@ -98,9 +98,9 @@ export default function AddArea() {
                   fontSize: '13px',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  border: status === s ? '2px solid var(--err)' : '1px solid #444',
+                  border: status === s ? '2px solid var(--danger)' : '1px solid #444',
                   backgroundColor: status === s ? 'rgba(228,40,29,0.1)' : '#222',
-                  color: status === s ? 'var(--err)' : '#9CA3AF',
+                  color: status === s ? 'var(--danger)' : '#9CA3AF',
                 }}
               >
                 {status === s ? '✓ ' : ''}
@@ -123,7 +123,7 @@ export default function AddArea() {
               style={{
                 fontSize: '13px',
                 fontWeight: 800,
-                color: 'var(--err)',
+                color: 'var(--danger)',
                 marginBottom: '4px',
               }}
             >

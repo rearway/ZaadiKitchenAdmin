@@ -231,7 +231,7 @@ export default function BuildingManagement() {
                       style={{
                         padding: '6px 14px',
                         fontSize: '13px',
-                        color: 'var(--err)',
+                        color: 'var(--danger)',
                         borderColor: 'rgba(220,38,38,0.3)',
                       }}
                       onClick={() => {
@@ -261,7 +261,7 @@ export default function BuildingManagement() {
                     style={{
                       fontSize: '13px',
                       fontWeight: 800,
-                      color: 'var(--err)',
+                      color: 'var(--danger)',
                       marginBottom: '4px',
                     }}
                   >
@@ -284,7 +284,7 @@ export default function BuildingManagement() {
                         borderRadius: '6px',
                         fontSize: '13px',
                         fontWeight: 700,
-                        backgroundColor: 'var(--err)',
+                        backgroundColor: 'var(--danger)',
                         color: '#FFF',
                         border: 'none',
                         cursor: 'pointer',

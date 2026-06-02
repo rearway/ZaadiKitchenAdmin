@@ -68,7 +68,7 @@ export default function Login() {
         {/* Header */}
         <div style={{ textAlign: 'center' }}>
           <h1 style={{ fontSize: '32px', marginBottom: '8px' }}>
-            Zaadi<span style={{ color: 'var(--err)' }}>.</span> Ops Portal
+            Zaadi<span style={{ color: 'var(--danger)' }}>.</span> Ops Portal
           </h1>
           <p style={{ color: '#9CA3AF', fontSize: '14px' }}>Internal team access only</p>
         </div>

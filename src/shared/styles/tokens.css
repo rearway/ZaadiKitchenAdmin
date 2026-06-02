@@ -1,0 +1,133 @@
+/* ==========================================================================
+   Zaadi Kitchen — Design Tokens
+   Single source of truth for all design values.
+   ========================================================================== */
+
+:root {
+  /* -------------------------------------------------------------------------
+     Brand red  (#E4281D)
+     Use for: logo mark, primary accents, active nav, CTAs, highlights.
+     NOT for error/destructive states — use --danger for those.
+     ------------------------------------------------------------------------- */
+  --brand: #e4281d;
+  --brand-dark: #b52016; /* hover / pressed variant */
+  --brand-a07: rgba(228, 40, 29, 0.07); /* formerly --redl */
+  --brand-a08: rgba(228, 40, 29, 0.08);
+  --brand-a10: rgba(228, 40, 29, 0.1); /* formerly --redm at .10 */
+  --brand-a15: rgba(228, 40, 29, 0.15); /* formerly --redm */
+  --brand-a20: rgba(228, 40, 29, 0.2);
+  --brand-a25: rgba(228, 40, 29, 0.25);
+  --brand-a40: rgba(228, 40, 29, 0.4); /* pulse animation ring start */
+
+  /* -------------------------------------------------------------------------
+     Danger red  (#DC2626)
+     Use for: error states, destructive actions, validation failures.
+     ------------------------------------------------------------------------- */
+  --danger: #dc2626; /* formerly --err */
+  --danger-l: #fef2f2; /* formerly --errl — light bg for error surfaces */
+  --danger-a06: rgba(220, 38, 38, 0.06);
+  --danger-a20: rgba(220, 38, 38, 0.2);
+  --danger-a30: rgba(220, 38, 38, 0.3);
+
+  /* -------------------------------------------------------------------------
+     Semantic status / accent colours
+     ------------------------------------------------------------------------- */
+  --grn: #16a34a; /* success / active zone */
+  --grn-l: #dcfce7; /* success light bg */
+  --ops: #374151; /* ops role badge, escalate button */
+  --ops-l: rgba(55, 65, 81, 0.08);
+  --purple-a10: rgba(139, 92, 246, 0.1); /* Paused status tint */
+  --papaya-a10: rgba(255, 115, 64, 0.1); /* issue-type badge, paused zone */
+
+  /* -------------------------------------------------------------------------
+     Background / surface scale  (dark-mode, lightest → darkest)
+     ------------------------------------------------------------------------- */
+  --blk: #000000; /* pure black (sidebar bg) */
+  --blk2: #111111;
+  --shell: #141414; /* outer layout shell (DashboardLayout) */
+  --blk3: #1a1a1a; /* primary card / panel bg */
+  --surface: #222222; /* secondary surface, input bg */
+  --surface-hov: #2a2a2a; /* hover bg (stat tiles) */
+
+  /* -------------------------------------------------------------------------
+     Border scale
+     ------------------------------------------------------------------------- */
+  --border-ui: #333333; /* standard card / panel border */
+  --border-med: #444444; /* form / inline borders */
+
+  /* -------------------------------------------------------------------------
+     Text scale
+     ------------------------------------------------------------------------- */
+  --white: #ffffff;
+  --text-3: #d1d5db; /* labels, form captions */
+  --text-4: #e5e7eb; /* slightly brighter muted */
+  --text-err: #f87171; /* inline error prose (warning notes) */
+  --soft: #9ca3af; /* secondary / placeholder text */
+  --mid: #6b7280; /* tertiary / faint text */
+  --faint: #666666; /* inactive radio indicators */
+
+  /* legacy aliases — kept for index.css global rules; prefer tokens above */
+  --border: #e5e7eb; /* light-mode border, unused in dark UI */
+  --bg: #f9fafb; /* light-mode page bg */
+
+  /* -------------------------------------------------------------------------
+     Decorative / one-off colours  (not rebranded; keep exact values)
+     ------------------------------------------------------------------------- */
+  --teal-a15: rgba(0, 200, 150, 0.15); /* Login page bg gradient */
+  --teal-a05: rgba(0, 200, 150, 0.05); /* Login role-card selected (removed, kept for reference) */
+  --warn-a10: rgba(245, 230, 66, 0.1); /* yellow warning / info bg */
+  /* rgba(239, 68, 68, ...) (#EF4444) — pulse keyframe ring colour.
+     Cannot be referenced via var() inside JSX @keyframes strings.
+     Kept as comment only; extracted to shared animation in Phase 1. */
+
+  /* -------------------------------------------------------------------------
+     Typography
+     ------------------------------------------------------------------------- */
+  --font-brand: 'Montserrat, sans-serif';
+
+  /* Type scale (px values in use — do not round) */
+  --text-12: 12px;
+  --text-13: 13px;
+  --text-14: 14px;
+  --text-15: 15px;
+  --text-16: 16px;
+  --text-18: 18px;
+  --text-20: 20px;
+  --text-24: 24px;
+  --text-28: 28px;
+  --text-32: 32px;
+  --text-48: 48px;
+
+  /* -------------------------------------------------------------------------
+     Spacing scale (px values in use — do not round)
+     ------------------------------------------------------------------------- */
+  --space-4: 4px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-10: 10px;
+  --space-12: 12px;
+  --space-14: 14px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-28: 28px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-48: 48px;
+  --space-64: 64px;
+  --space-72: 72px;
+
+  /* -------------------------------------------------------------------------
+     Border-radius scale (px values in use — do not round)
+     ------------------------------------------------------------------------- */
+  --radius-4: 4px;
+  --radius-6: 6px;
+  --radius-8: 8px;
+  --radius-10: 10px;
+  --radius-12: 12px;
+  --radius-13: 13px; /* toggle switch */
+  --radius-16: 16px;
+  --radius-20: 20px;
+  --radius-24: 24px;
+  --radius-full: 50%; /* circles / avatars */
+}
