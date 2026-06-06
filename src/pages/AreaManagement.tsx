@@ -118,7 +118,7 @@ export default function AreaManagement() {
                   </span>
                   <span style={{ color: '#6B7280' }}>|</span>
                   <span style={{ color: '#FFF', fontSize: '13px', fontWeight: 600 }}>
-                    {area.buildings_count ?? 0} buildings registered
+                    0 buildings registered
                   </span>
                 </div>
               </div>

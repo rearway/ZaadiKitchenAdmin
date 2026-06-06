@@ -5,7 +5,7 @@ export const MealTypeSchema = z
   .transform((t, ctx) => {
     const lower = t.toLowerCase();
     if (lower !== 'executive' && lower !== 'salad') {
-      ctx.addIssue({ code: z.ZodIssueCode.invalid_enum_value, options: ['executive', 'salad'], received: t });
+      ctx.addIssue({ code: z.ZodIssueCode.invalid_value, values: ['executive', 'salad'], received: t } as Parameters<typeof ctx.addIssue>[0]);
       return z.NEVER;
     }
     return lower as 'executive' | 'salad';
