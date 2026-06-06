@@ -1,67 +1,58 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-
-type Building = {
-  id: string;
-  name: string;
-};
-
-const MOCK_BUILDINGS: Record<string, Building[]> = {
-  '1': [
-    { id: 'b1', name: 'Al Nakheel Tower, King Fahad Rd' },
-    { id: 'b2', name: 'Nakheel Business Park Tower A' },
-    { id: 'b3', name: 'Al Nakheel Plaza, Office Tower' },
-  ],
-  '2': [
-    { id: 'b4', name: 'Olaya Tower B' },
-    { id: 'b5', name: 'Kingdom Centre, Office Wing' },
-    { id: 'b6', name: 'Al Faisaliah Tower' },
-  ],
-  '3': [],
-  '4': [{ id: 'b7', name: 'Al Malaz Business Complex' }],
-};
-
-const AREA_NAMES: Record<string, string> = {
-  '1': 'Al Nakheel',
-  '2': 'Olaya Business District',
-  '3': 'Al Zahra',
-  '4': 'Al Malaz',
-};
+import { useBuildings, useAddBuilding } from '@/features/areas/api/areas.queries';
+import { useAreas } from '@/features/areas/api/areas.queries';
 
 export default function BuildingManagement() {
-  const { areaId } = useParams<{ areaId: string }>();
+  const { areaId = '' } = useParams<{ areaId: string }>();
   const navigate = useNavigate();
 
-  const areaName = AREA_NAMES[areaId ?? ''] ?? 'Unknown Area';
-  const [buildings, setBuildings] = useState<Building[]>(MOCK_BUILDINGS[areaId ?? ''] ?? []);
+  const { data: areas = [] } = useAreas();
+  const area = areas.find((a) => a.id === areaId);
+  const areaName = area?.name ?? 'Unknown Area';
+
+  const { data: buildings = [], isLoading, isError } = useBuildings(areaId);
+  const addBuilding = useAddBuilding(areaId);
 
   const [addingNew, setAddingNew] = useState(false);
   const [newName, setNewName] = useState('');
-
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
-
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const handleAdd = () => {
     const trimmed = newName.trim();
     if (!trimmed) return;
-    setBuildings([...buildings, { id: Date.now().toString(), name: trimmed }]);
-    setNewName('');
-    setAddingNew(false);
+    addBuilding.mutate(
+      { name: trimmed },
+      {
+        onSuccess: () => {
+          setNewName('');
+          setAddingNew(false);
+        },
+      },
+    );
   };
+
+  // TODO[api]: edit building endpoint not yet in spec — local-only for now
+  const [localEdits, setLocalEdits] = useState<Record<string, string>>({});
+  const displayName = (id: string, fallback: string) => localEdits[id] ?? fallback;
 
   const handleEditSave = (id: string) => {
     const trimmed = editName.trim();
     if (!trimmed) return;
-    setBuildings(buildings.map((b) => (b.id === id ? { ...b, name: trimmed } : b)));
+    setLocalEdits((prev) => ({ ...prev, [id]: trimmed }));
     setEditingId(null);
   };
 
+  // TODO[api]: delete building endpoint not yet in spec — local-only for now
+  const [localDeleted, setLocalDeleted] = useState<Set<string>>(new Set());
   const handleDelete = (id: string) => {
-    setBuildings(buildings.filter((b) => b.id !== id));
+    setLocalDeleted((prev) => new Set(prev).add(id));
     setConfirmDeleteId(null);
   };
+
+  const visibleBuildings = buildings.filter((b) => !localDeleted.has(b.id));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '720px' }}>
@@ -73,7 +64,7 @@ export default function BuildingManagement() {
             style={{ padding: '8px 12px' }}
             onClick={() => navigate('/areas')}
           >
-            &larr;
+            ←
           </button>
           <h1 style={{ fontSize: '28px', fontFamily: 'Montserrat, sans-serif', margin: 0 }}>
             Buildings — {areaName}
@@ -135,13 +126,15 @@ export default function BuildingManagement() {
             }}
             placeholder="Building name, e.g. Al Nakheel Tower, King Fahad Rd"
             style={{ flex: 1, backgroundColor: '#222', fontSize: '14px' }}
+            disabled={addBuilding.isPending}
           />
           <button
             className="btn-primary"
             style={{ padding: '8px 20px', whiteSpace: 'nowrap' }}
             onClick={handleAdd}
+            disabled={addBuilding.isPending}
           >
-            Save
+            {addBuilding.isPending ? 'Saving…' : 'Save'}
           </button>
           <button
             className="btn-ghost"
@@ -156,6 +149,17 @@ export default function BuildingManagement() {
         </div>
       )}
 
+      {isLoading && (
+        <div style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF' }}>
+          Loading buildings…
+        </div>
+      )}
+      {isError && (
+        <div style={{ padding: '24px', textAlign: 'center', color: 'var(--danger)' }}>
+          Failed to load buildings.
+        </div>
+      )}
+
       {/* Building list */}
       <div
         style={{
@@ -165,17 +169,17 @@ export default function BuildingManagement() {
           overflow: 'hidden',
         }}
       >
-        {buildings.length === 0 && !addingNew ? (
+        {visibleBuildings.length === 0 && !addingNew && !isLoading ? (
           <div style={{ padding: '32px', textAlign: 'center', color: '#6B7280', fontSize: '14px' }}>
             No buildings added yet. Click "+ Add Building" to start.
           </div>
         ) : (
-          buildings.map((building, index) => (
+          visibleBuildings.map((building, index) => (
             <div key={building.id}>
               <div
                 style={{
                   padding: '14px 16px',
-                  borderBottom: index < buildings.length - 1 ? '1px solid #2A2A2A' : 'none',
+                  borderBottom: index < visibleBuildings.length - 1 ? '1px solid #2A2A2A' : 'none',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px',
@@ -212,14 +216,14 @@ export default function BuildingManagement() {
                 ) : (
                   <>
                     <span style={{ flex: 1, fontSize: '14px', fontWeight: 600, color: '#FFF' }}>
-                      {building.name}
+                      {displayName(building.id, building.name)}
                     </span>
                     <button
                       className="btn-ghost"
                       style={{ padding: '6px 14px', fontSize: '13px' }}
                       onClick={() => {
                         setEditingId(building.id);
-                        setEditName(building.name);
+                        setEditName(displayName(building.id, building.name));
                         setConfirmDeleteId(null);
                         setAddingNew(false);
                       }}
@@ -246,7 +250,6 @@ export default function BuildingManagement() {
                 )}
               </div>
 
-              {/* Inline delete confirmation */}
               {confirmDeleteId === building.id && (
                 <div
                   style={{

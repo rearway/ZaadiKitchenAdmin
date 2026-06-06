@@ -1,17 +1,33 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { loginApi } from '@/features/auth/api/auth.api';
+import { useSessionStore } from '@/store/useSessionStore';
+import { ApiError } from '@/shared/types/api';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const setSession = useSessionStore((s) => s.setSession);
   const navigate = useNavigate();
 
-  // TODO[auth]: replace with real POST /auth/admin/login in Phase 3
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email && password) {
-      localStorage.setItem('userRole', 'Admin');
-      navigate('/dashboard');
+    setError('');
+    setLoading(true);
+    try {
+      const { user, accessToken, refreshToken } = await loginApi(email, password);
+      setSession(user, accessToken, refreshToken);
+      navigate(user.role === 'ops' ? '/ops' : '/dashboard');
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : 'Unable to sign in. Please try again.',
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -93,10 +109,9 @@ export default function Login() {
           </div>
 
           <form
-            onSubmit={handleLogin}
+            onSubmit={(e) => { void handleLogin(e); }}
             style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
           >
-            {/* Email & Password */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <label style={{ fontSize: '14px', color: '#D1D5DB', fontWeight: 500 }}>
@@ -127,8 +142,27 @@ export default function Login() {
               </div>
             </div>
 
-            <button type="submit" className="btn-primary" style={{ marginTop: '8px' }}>
-              Sign in &rarr;
+            {error && (
+              <div
+                style={{
+                  backgroundColor: 'rgba(220,38,38,0.1)',
+                  color: 'var(--danger)',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="btn-primary"
+              style={{ marginTop: '8px', opacity: loading ? 0.7 : 1 }}
+              disabled={loading}
+            >
+              {loading ? 'Signing in…' : 'Sign in →'}
             </button>
           </form>
         </div>

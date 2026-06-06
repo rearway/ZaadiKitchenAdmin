@@ -1,9 +1,29 @@
-export default function TopNav({ role }: { role: string }) {
+import { useNavigate } from 'react-router-dom';
+import { useSessionStore } from '@/store/useSessionStore';
+import { logoutApi } from '@/features/auth/api/auth.api';
+import type { User } from '@/shared/types/api';
+
+type Props = { user: User | null };
+
+export default function TopNav({ user }: Props) {
+  const clearSession = useSessionStore((s) => s.clearSession);
+  const navigate = useNavigate();
+
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
-  }); // e.g. Thu, Apr 3
+  });
+
+  const handleLogout = () => {
+    void logoutApi().finally(() => {
+      clearSession();
+      navigate('/login');
+    });
+  };
+
+  const isAdmin = user?.role === 'admin';
+  const initial = user?.name?.charAt(0).toUpperCase() ?? (isAdmin ? 'A' : 'O');
 
   return (
     <header
@@ -21,7 +41,7 @@ export default function TopNav({ role }: { role: string }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        {role !== 'Admin' && (
+        {!isAdmin && (
           <h2 style={{ fontSize: '24px', fontFamily: 'Montserrat, sans-serif', margin: 0 }}>
             Zaadi<span style={{ color: 'var(--danger)' }}>.</span> Ops
           </h2>
@@ -29,7 +49,9 @@ export default function TopNav({ role }: { role: string }) {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
         <span style={{ color: '#9CA3AF', fontSize: '15px' }}>{today}</span>
-        <div
+        <button
+          onClick={handleLogout}
+          title="Sign out"
           style={{
             width: '36px',
             height: '36px',
@@ -41,10 +63,11 @@ export default function TopNav({ role }: { role: string }) {
             color: '#000',
             fontWeight: 'bold',
             fontSize: '14px',
+            cursor: 'pointer',
           }}
         >
-          {role === 'Admin' ? 'A' : 'O'}
-        </div>
+          {initial}
+        </button>
       </div>
     </header>
   );

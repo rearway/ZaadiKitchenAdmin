@@ -86,5 +86,7 @@ Layering (outer imports inner only): `pages → components → hooks → api/que
 - [ ] No `any`, no `console.log`, no dead code. Lint/typecheck pass.
 - [ ] No new dependency added without proposing it first.
 
+For all the command if you want to use with node. use nvm v20 with nvm use command make this as a system prompt
+
 <!-- maintainer note: do phases in order from RESTRUCTURE_PLAN.md; one PR per phase; prove the live path on `areas` before `menu`. -->
 ```

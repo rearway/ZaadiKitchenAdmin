@@ -1,16 +1,60 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useCreateMeal } from '@/features/menu/api/menu.queries';
+import type { MealType } from '@/features/menu/model/menu.schema';
+import { ApiError } from '@/shared/types/api';
 
 export default function AddDish() {
   const navigate = useNavigate();
-  const [type, setType] = useState<'Executive' | 'Salad'>('Executive');
+  const createMeal = useCreateMeal();
+
+  const [mealType, setMealType] = useState<MealType>('executive');
+  const [nameEn, setNameEn] = useState('');
+  const [calories, setCalories] = useState('');
+  const [proteinG, setProteinG] = useState('');
+  const [carbsG, setCarbsG] = useState('');
+  const [fatG, setFatG] = useState('');
+  const [notesEn, setNotesEn] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = () => {
+    if (!nameEn.trim()) {
+      setError('Meal name is required.');
+      return;
+    }
+    setError('');
+
+    const hasMacros = proteinG || carbsG || fatG;
+
+    createMeal.mutate(
+      {
+        name_en: nameEn.trim(),
+        meal_type: mealType,
+        kcal: calories ? Number(calories) : undefined,
+        macros: hasMacros
+          ? {
+              protein_g: Number(proteinG) || 0,
+              carbs_g: Number(carbsG) || 0,
+              fat_g: Number(fatG) || 0,
+            }
+          : undefined,
+        notes_en: notesEn.trim() || undefined,
+      },
+      {
+        onSuccess: () => navigate('/menu'),
+        onError: (err) => {
+          setError(err instanceof ApiError ? err.message : 'Failed to create dish.');
+        },
+      },
+    );
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '800px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <button className="btn-ghost" style={{ padding: '8px 12px' }} onClick={() => navigate(-1)}>
-          &larr;
+          ←
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <h1 style={{ fontSize: '32px', fontFamily: 'Montserrat, sans-serif', margin: 0 }}>
@@ -65,25 +109,25 @@ export default function AddDish() {
             }}
           >
             <button
-              onClick={() => setType('Executive')}
+              onClick={() => setMealType('executive')}
               style={{
                 padding: '8px 24px',
                 borderRadius: '6px',
                 fontWeight: 600,
-                backgroundColor: type === 'Executive' ? '#333' : 'transparent',
-                color: type === 'Executive' ? '#FFF' : '#9CA3AF',
+                backgroundColor: mealType === 'executive' ? '#333' : 'transparent',
+                color: mealType === 'executive' ? '#FFF' : '#9CA3AF',
               }}
             >
               🍛 Executive
             </button>
             <button
-              onClick={() => setType('Salad')}
+              onClick={() => setMealType('salad')}
               style={{
                 padding: '8px 24px',
                 borderRadius: '6px',
                 fontWeight: 600,
-                backgroundColor: type === 'Salad' ? '#333' : 'transparent',
-                color: type === 'Salad' ? '#FFF' : '#9CA3AF',
+                backgroundColor: mealType === 'salad' ? '#333' : 'transparent',
+                color: mealType === 'salad' ? '#FFF' : '#9CA3AF',
               }}
             >
               🥗 Salad
@@ -153,6 +197,8 @@ export default function AddDish() {
             </label>
             <input
               type="text"
+              value={nameEn}
+              onChange={(e) => setNameEn(e.target.value)}
               placeholder="e.g. Lemon Herb Grilled Chicken"
               style={{ width: '100%', backgroundColor: '#222' }}
             />
@@ -173,21 +219,29 @@ export default function AddDish() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <input
                 type="number"
+                value={calories}
+                onChange={(e) => setCalories(e.target.value)}
                 placeholder="Calories"
                 style={{ width: '100%', backgroundColor: '#222' }}
               />
               <input
                 type="number"
+                value={proteinG}
+                onChange={(e) => setProteinG(e.target.value)}
                 placeholder="Protein (g)"
                 style={{ width: '100%', backgroundColor: '#222' }}
               />
               <input
                 type="number"
+                value={carbsG}
+                onChange={(e) => setCarbsG(e.target.value)}
                 placeholder="Carbs (g)"
                 style={{ width: '100%', backgroundColor: '#222' }}
               />
               <input
                 type="number"
+                value={fatG}
+                onChange={(e) => setFatG(e.target.value)}
                 placeholder="Fat (g)"
                 style={{ width: '100%', backgroundColor: '#222' }}
               />
@@ -207,6 +261,8 @@ export default function AddDish() {
               CHEF'S NOTE (ENGLISH)
             </label>
             <textarea
+              value={notesEn}
+              onChange={(e) => setNotesEn(e.target.value)}
               placeholder="Add any specific heating or allergy notes..."
               style={{
                 width: '100%',
@@ -285,14 +341,29 @@ export default function AddDish() {
           </div>
         </div>
 
+        {error && (
+          <div
+            style={{
+              backgroundColor: 'rgba(220,38,38,0.1)',
+              color: 'var(--danger)',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              fontSize: '14px',
+            }}
+          >
+            {error}
+          </div>
+        )}
+
         {/* CTA */}
         <div style={{ marginTop: '16px', borderTop: '1px solid #333', paddingTop: '32px' }}>
           <button
             className="btn-primary"
-            style={{ padding: '16px 32px', fontSize: '16px' }}
-            onClick={() => navigate('/menu')}
+            style={{ padding: '16px 32px', fontSize: '16px', opacity: createMeal.isPending ? 0.7 : 1 }}
+            disabled={createMeal.isPending}
+            onClick={handleSubmit}
           >
-            Add to Library (saves as Draft)
+            {createMeal.isPending ? 'Saving…' : 'Add to Library (saves as Draft)'}
           </button>
           <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '12px' }}>
             Saved as Draft. Activate in Meal Library to assign to weeks.
