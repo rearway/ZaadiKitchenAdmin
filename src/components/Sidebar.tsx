@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Activity,
@@ -7,7 +7,10 @@ import {
   Users,
   MessageSquare,
   Map,
+  LogOut,
 } from 'lucide-react';
+import { logoutApi } from '@/features/auth/api/auth.api';
+import { useSessionStore } from '@/store/useSessionStore';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -20,6 +23,18 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar() {
+  const navigate = useNavigate();
+  const clearSession = useSessionStore((s) => s.clearSession);
+
+  const handleLogout = async () => {
+    try {
+      await logoutApi();
+    } finally {
+      clearSession();
+      navigate('/login');
+    }
+  };
+
   return (
     <aside
       style={{
@@ -72,6 +87,37 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
+      <div style={{ padding: '12px', borderTop: '1px solid #222222' }}>
+        <button
+          onClick={handleLogout}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            background: 'none',
+            border: 'none',
+            color: '#9CA3AF',
+            fontWeight: 500,
+            fontSize: '14px',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(220,38,38,0.08)';
+            e.currentTarget.style.color = '#F87171';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = '#9CA3AF';
+          }}
+        >
+          <LogOut size={20} />
+          Logout
+        </button>
+      </div>
     </aside>
   );
 }

@@ -13,6 +13,9 @@ export default function MenuManager() {
   const [assignModalSlot, setAssignModalSlot] = useState<Slot | null>(null);
   const [editMeal, setEditMeal] = useState<Meal | null>(null);
   const [libraryFilter, setLibraryFilter] = useState<LibraryFilter>('all');
+  const [confirmClearSlotId, setConfirmClearSlotId] = useState<string | null>(null);
+  const [confirmStatusMealId, setConfirmStatusMealId] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const { data: weeks = [], isLoading: weeksLoading } = useWeeks();
   const { data: meals = [], isLoading: mealsLoading } = useMeals();
@@ -40,6 +43,31 @@ export default function MenuManager() {
     return `${fmt(week.start_date)} – ${fmt(week.end_date)}`;
   };
 
+  const handleClearSlot = (slotId: string) => {
+    setErrorMsg(null);
+    clearSlot.mutate(slotId, {
+      onSuccess: () => setConfirmClearSlotId(null),
+      onError: (err) => {
+        setConfirmClearSlotId(null);
+        setErrorMsg(err instanceof Error ? err.message : 'Failed to clear slot');
+      },
+    });
+  };
+
+  const handleStatusChange = (meal: Meal) => {
+    setErrorMsg(null);
+    updateMealStatus.mutate(
+      { id: meal.id, status: meal.status === 'active' ? 'draft' : 'active' },
+      {
+        onSuccess: () => setConfirmStatusMealId(null),
+        onError: (err) => {
+          setConfirmStatusMealId(null);
+          setErrorMsg(err instanceof Error ? err.message : 'Failed to update meal status');
+        },
+      },
+    );
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       {/* Header & Tabs */}
@@ -64,6 +92,30 @@ export default function MenuManager() {
           </TabButton>
         </div>
       </div>
+
+      {errorMsg && (
+        <div
+          style={{
+            backgroundColor: 'rgba(220,38,38,0.1)',
+            border: '1px solid rgba(220,38,38,0.3)',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            color: '#F87171',
+            fontSize: '14px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <span>⚠ {errorMsg}</span>
+          <button
+            onClick={() => setErrorMsg(null)}
+            style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {activeTab === 'planner' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -110,100 +162,152 @@ export default function MenuManager() {
               {slots.map((slot) => {
                 const dayLabel = DAY_LABEL[slot.day] ?? slot.day.toUpperCase();
                 const isFirst = slot.day === slots[0]?.day;
+                const isClearPending = clearSlot.isPending && clearSlot.variables === slot.id;
                 return (
-                  <div
-                    key={slot.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '24px',
-                      backgroundColor: '#1A1A1A',
-                      padding: '16px 24px',
-                      borderRadius: '12px',
-                      border: '1px solid #333',
-                    }}
-                  >
+                  <div key={slot.id}>
                     <div
                       style={{
-                        width: '60px',
-                        color: isFirst ? 'var(--danger)' : '#9CA3AF',
-                        fontWeight: isFirst ? 'bold' : 'normal',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '24px',
+                        backgroundColor: '#1A1A1A',
+                        padding: '16px 24px',
+                        borderRadius: confirmClearSlotId === slot.id ? '12px 12px 0 0' : '12px',
+                        border: '1px solid #333',
+                        borderBottom: confirmClearSlotId === slot.id ? 'none' : '1px solid #333',
                       }}
                     >
-                      {dayLabel}
+                      <div
+                        style={{
+                          width: '60px',
+                          color: isFirst ? 'var(--danger)' : '#9CA3AF',
+                          fontWeight: isFirst ? 'bold' : 'normal',
+                        }}
+                      >
+                        {dayLabel}
+                      </div>
+
+                      <div style={{ flex: 1 }}>
+                        {slot.meal ? (
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                              <div
+                                style={{
+                                  width: '44px',
+                                  height: '44px',
+                                  borderRadius: '8px',
+                                  background: 'linear-gradient(135deg, #E4281D, #F5A623)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '24px',
+                                }}
+                              >
+                                {slot.meal_type === 'executive' ? '🍛' : '🥗'}
+                              </div>
+                              <div>
+                                <h4 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>
+                                  {slot.meal.name_en}
+                                </h4>
+                                <span style={{ fontSize: '13px', color: '#9CA3AF' }}>
+                                  {slot.meal_type === 'executive' ? 'Executive' : 'Salad'}
+                                  {slot.meal.kcal ? ` · ${slot.meal.kcal} kcal` : ''}
+                                </span>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                className="btn-ghost"
+                                style={{ padding: '8px' }}
+                                onClick={() => {
+                                  setConfirmClearSlotId(null);
+                                  setAssignModalSlot(slot);
+                                }}
+                              >
+                                ✏️ Edit
+                              </button>
+                              <button
+                                className="btn-ghost"
+                                style={{ padding: '8px', color: '#9CA3AF' }}
+                                onClick={() => setConfirmClearSlotId(
+                                  confirmClearSlotId === slot.id ? null : slot.id
+                                )}
+                                disabled={isClearPending}
+                              >
+                                {isClearPending ? '…' : '✕'}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            onClick={() => setAssignModalSlot(slot)}
+                            style={{
+                              border: '1px dashed #444',
+                              borderRadius: '8px',
+                              padding: '16px',
+                              textAlign: 'center',
+                              color: '#9CA3AF',
+                              cursor: 'pointer',
+                              transition: 'border-color 0.2s',
+                            }}
+                            onMouseOver={(e) => (e.currentTarget.style.borderColor = 'var(--danger)')}
+                            onMouseOut={(e) => (e.currentTarget.style.borderColor = '#444')}
+                          >
+                            + Add meal
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    <div style={{ flex: 1 }}>
-                      {slot.meal ? (
-                        <div
+                    {/* Inline clear confirmation */}
+                    {confirmClearSlotId === slot.id && (
+                      <div
+                        style={{
+                          backgroundColor: 'rgba(220,38,38,0.06)',
+                          border: '1px solid rgba(220,38,38,0.2)',
+                          borderTop: 'none',
+                          borderRadius: '0 0 12px 12px',
+                          padding: '12px 24px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                        }}
+                      >
+                        <span style={{ fontSize: '13px', color: '#F87171', flex: 1 }}>
+                          Remove this meal from the slot?
+                        </span>
+                        <button
                           style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <div
-                              style={{
-                                width: '44px',
-                                height: '44px',
-                                borderRadius: '8px',
-                                background: 'linear-gradient(135deg, #E4281D, #F5A623)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '24px',
-                              }}
-                            >
-                              {slot.meal_type === 'executive' ? '🍛' : '🥗'}
-                            </div>
-                            <div>
-                              <h4 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>
-                                {slot.meal.name_en}
-                              </h4>
-                              <span style={{ fontSize: '13px', color: '#9CA3AF' }}>
-                                {slot.meal_type === 'executive' ? 'Executive' : 'Salad'}
-                                {slot.meal.kcal ? ` · ${slot.meal.kcal} kcal` : ''}
-                              </span>
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button
-                              className="btn-ghost"
-                              style={{ padding: '8px' }}
-                              onClick={() => setAssignModalSlot(slot)}
-                            >
-                              ✏️ Edit
-                            </button>
-                            <button
-                              className="btn-ghost"
-                              style={{ padding: '8px', color: '#9CA3AF' }}
-                              onClick={() => clearSlot.mutate(slot.id)}
-                              disabled={clearSlot.isPending}
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div
-                          onClick={() => setAssignModalSlot(slot)}
-                          style={{
-                            border: '1px dashed #444',
-                            borderRadius: '8px',
-                            padding: '16px',
-                            textAlign: 'center',
-                            color: '#9CA3AF',
+                            padding: '6px 14px',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontWeight: 700,
+                            backgroundColor: 'var(--danger)',
+                            color: '#FFF',
+                            border: 'none',
                             cursor: 'pointer',
-                            transition: 'border-color 0.2s',
+                            opacity: isClearPending ? 0.6 : 1,
                           }}
-                          onMouseOver={(e) => (e.currentTarget.style.borderColor = 'var(--danger)')}
-                          onMouseOut={(e) => (e.currentTarget.style.borderColor = '#444')}
+                          disabled={isClearPending}
+                          onClick={() => handleClearSlot(slot.id)}
                         >
-                          + Add meal
-                        </div>
-                      )}
-                    </div>
+                          {isClearPending ? 'Removing…' : 'Confirm remove'}
+                        </button>
+                        <button
+                          className="btn-ghost"
+                          style={{ padding: '6px 12px', fontSize: '13px' }}
+                          onClick={() => setConfirmClearSlotId(null)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -242,7 +346,14 @@ export default function MenuManager() {
               className="btn-primary"
               style={{ padding: '12px 32px', fontSize: '16px', opacity: publishWeek.isPending ? 0.7 : 1 }}
               disabled={publishWeek.isPending}
-              onClick={() => currentWeek && publishWeek.mutate(currentWeek.id)}
+              onClick={() => {
+                if (!currentWeek) return;
+                setErrorMsg(null);
+                publishWeek.mutate(currentWeek.id, {
+                  onError: (err) =>
+                    setErrorMsg(err instanceof Error ? err.message : 'Failed to publish week'),
+                });
+              }}
             >
               {publishWeek.isPending ? 'Publishing…' : "📅 Publish Week's Menu"}
             </button>
@@ -284,90 +395,136 @@ export default function MenuManager() {
             {filteredMeals.map((meal) => {
               const isStatusPending =
                 updateMealStatus.isPending && updateMealStatus.variables?.id === meal.id;
+              const isConfirmingStatus = confirmStatusMealId === meal.id;
               return (
-                <div
-                  key={meal.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '16px',
-                    backgroundColor: '#1A1A1A',
-                    borderRadius: '12px',
-                    border: '1px solid #333',
-                    opacity: meal.status === 'draft' ? 0.6 : 1,
-                  }}
-                >
+                <div key={meal.id}>
                   <div
                     style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '8px',
-                      background: 'linear-gradient(135deg, #E4281D, #F5A623)',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '20px',
-                      marginRight: '16px',
-                      flexShrink: 0,
+                      padding: '16px',
+                      backgroundColor: '#1A1A1A',
+                      borderRadius: isConfirmingStatus ? '12px 12px 0 0' : '12px',
+                      border: '1px solid #333',
+                      borderBottom: isConfirmingStatus ? 'none' : '1px solid #333',
+                      opacity: meal.status === 'draft' ? 0.6 : 1,
                     }}
                   >
-                    {meal.meal_type === 'executive' ? '🍛' : '🥗'}
-                  </div>
+                    <div
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '8px',
+                        background: 'linear-gradient(135deg, #E4281D, #F5A623)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '20px',
+                        marginRight: '16px',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {meal.meal_type === 'executive' ? '🍛' : '🥗'}
+                    </div>
 
-                  <div style={{ flex: 1 }}>
-                    <h4 style={{ fontWeight: 600, fontSize: '15px' }}>{meal.name_en}</h4>
-                    <div style={{ fontSize: '13px', color: '#9CA3AF' }}>
-                      {meal.meal_type === 'executive' ? 'Executive' : 'Salad'}
-                      {meal.kcal ? ` · ${meal.kcal} kcal` : ''}
-                      {meal.macros ? ` · ${meal.macros.protein_g}g protein` : ''}
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ fontWeight: 600, fontSize: '15px' }}>{meal.name_en}</h4>
+                      <div style={{ fontSize: '13px', color: '#9CA3AF' }}>
+                        {meal.meal_type === 'executive' ? 'Executive' : 'Salad'}
+                        {meal.kcal ? ` · ${meal.kcal} kcal` : ''}
+                        {meal.macros ? ` · ${meal.macros.protein_g}g protein` : ''}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          backgroundColor:
+                            meal.status === 'active' ? 'rgba(228,40,29,.10)' : 'transparent',
+                          color: meal.status === 'active' ? 'var(--danger)' : '#6B7280',
+                          border: meal.status === 'draft' ? '1px solid #444' : 'none',
+                        }}
+                      >
+                        {meal.status === 'active' ? 'Active' : 'Draft'}
+                      </span>
+                      <button
+                        className="btn-ghost"
+                        style={{ padding: '6px 12px', fontSize: '12px' }}
+                        onClick={() => setEditMeal(meal)}
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        className="btn-ghost"
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: '12px',
+                          opacity: isStatusPending ? 0.5 : 1,
+                          color: meal.status === 'active' ? '#9CA3AF' : 'var(--danger)',
+                        }}
+                        disabled={isStatusPending}
+                        onClick={() =>
+                          setConfirmStatusMealId(isConfirmingStatus ? null : meal.id)
+                        }
+                      >
+                        {isStatusPending
+                          ? '…'
+                          : meal.status === 'active'
+                            ? 'Deactivate'
+                            : 'Activate'}
+                      </button>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span
+                  {/* Inline status change confirmation */}
+                  {isConfirmingStatus && (
+                    <div
                       style={{
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        backgroundColor:
-                          meal.status === 'active' ? 'rgba(228,40,29,.10)' : 'transparent',
-                        color: meal.status === 'active' ? 'var(--danger)' : '#6B7280',
-                        border: meal.status === 'draft' ? '1px solid #444' : 'none',
+                        backgroundColor: 'rgba(220,38,38,0.06)',
+                        border: '1px solid rgba(220,38,38,0.2)',
+                        borderTop: 'none',
+                        borderRadius: '0 0 12px 12px',
+                        padding: '12px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
                       }}
                     >
-                      {meal.status === 'active' ? 'Active' : 'Draft'}
-                    </span>
-                    <button
-                      className="btn-ghost"
-                      style={{ padding: '6px 12px', fontSize: '12px' }}
-                      onClick={() => setEditMeal(meal)}
-                    >
-                      ✏️ Edit
-                    </button>
-                    <button
-                      className="btn-ghost"
-                      style={{
-                        padding: '6px 12px',
-                        fontSize: '12px',
-                        opacity: isStatusPending ? 0.5 : 1,
-                        color: meal.status === 'active' ? '#9CA3AF' : 'var(--danger)',
-                      }}
-                      disabled={isStatusPending}
-                      onClick={() =>
-                        updateMealStatus.mutate({
-                          id: meal.id,
-                          status: meal.status === 'active' ? 'draft' : 'active',
-                        })
-                      }
-                    >
-                      {isStatusPending
-                        ? '…'
-                        : meal.status === 'active'
-                          ? 'Deactivate'
-                          : 'Activate'}
-                    </button>
-                  </div>
+                      <span style={{ fontSize: '13px', color: '#F87171', flex: 1 }}>
+                        {meal.status === 'active'
+                          ? 'Deactivate this meal? It will be removed from future slot options.'
+                          : 'Activate this meal? It will appear in slot assignment.'}
+                      </span>
+                      <button
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          backgroundColor: meal.status === 'active' ? '#444' : 'var(--danger)',
+                          color: '#FFF',
+                          border: 'none',
+                          cursor: 'pointer',
+                          opacity: isStatusPending ? 0.6 : 1,
+                        }}
+                        disabled={isStatusPending}
+                        onClick={() => handleStatusChange(meal)}
+                      >
+                        {isStatusPending ? '…' : 'Confirm'}
+                      </button>
+                      <button
+                        className="btn-ghost"
+                        style={{ padding: '6px 12px', fontSize: '13px' }}
+                        onClick={() => setConfirmStatusMealId(null)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -391,9 +548,16 @@ export default function MenuManager() {
           isPending={assignSlot.isPending}
           onClose={() => setAssignModalSlot(null)}
           onAssign={(meal: Meal) => {
+            setErrorMsg(null);
             assignSlot.mutate(
               { slotId: assignModalSlot.id, mealId: meal.id },
-              { onSuccess: () => setAssignModalSlot(null) },
+              {
+                onSuccess: () => setAssignModalSlot(null),
+                onError: (err) => {
+                  setAssignModalSlot(null);
+                  setErrorMsg(err instanceof Error ? err.message : 'Failed to assign meal');
+                },
+              },
             );
           }}
         />
@@ -405,9 +569,16 @@ export default function MenuManager() {
           isPending={updateMeal.isPending}
           onClose={() => setEditMeal(null)}
           onSave={(input) => {
+            setErrorMsg(null);
             updateMeal.mutate(
               { id: editMeal.id, input },
-              { onSuccess: () => setEditMeal(null) },
+              {
+                onSuccess: () => setEditMeal(null),
+                onError: (err) => {
+                  setEditMeal(null);
+                  setErrorMsg(err instanceof Error ? err.message : 'Failed to update meal');
+                },
+              },
             );
           }}
         />
@@ -623,11 +794,8 @@ function AssignDishModal({
             className="btn-primary"
             style={{ flex: 2, opacity: isPending ? 0.7 : 1 }}
             disabled={!selected || isPending}
-            onClick={async () => {
-              if (selected) {
-                await onAssign(selected); // <-- Waits for the assignment to complete
-                onClose();                // <-- Closes only if successful
-              }
+            onClick={() => {
+              if (selected) onAssign(selected);
             }}
           >
             {isPending ? 'Assigning…' : `✓ Assign ${selected ? selected.name_en : ''}`}

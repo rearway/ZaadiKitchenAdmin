@@ -13,7 +13,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://devapi.zaadikitchen.com',
+        target: 'http://localhost:3000',
         changeOrigin: true,
         secure: true,
       },
