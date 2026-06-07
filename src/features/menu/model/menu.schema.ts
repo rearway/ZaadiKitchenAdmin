@@ -39,26 +39,34 @@ export const MealSchema = z
     meal_id: z.string().optional(),
     name_en: z.string().optional(),
     nameEn: z.string().optional(),
-    name_ar: z.string().optional(),
-    nameAr: z.string().optional(),
+    name_ar: z.string().nullable().optional(),
+    nameAr: z.string().nullable().optional(),
     meal_type: MealTypeSchema.optional(),
     mealType: MealTypeSchema.optional(),
-    kcal: z.number().optional(),
+    kcal: z.number().nullable().optional(),
     macros: MacrosSchema.optional(),
     status: MealStatusSchema.optional(),
-    chef_note: z.string().optional(),
-    already_used: z.unknown().optional(),
-    used_on_day: z.unknown().optional(),
+    chef_note: z.string().nullable().optional(),
+    key_ingredients: z.string().nullable().optional(),
+    emoji: z.string().nullable().optional(),
+    photo_url: z.string().nullable().optional(),
+    already_used: z.boolean().nullable().optional(),
+    used_on_day: z.string().nullable().optional(),
   })
   .transform((m) => ({
     id: m.id ?? m.meal_id ?? '',
     name_en: m.name_en ?? m.nameEn ?? '',
-    name_ar: m.name_ar ?? m.nameAr,
+    name_ar: m.name_ar ?? m.nameAr ?? null,
     meal_type: m.meal_type ?? m.mealType,
-    kcal: m.kcal,
+    kcal: m.kcal ?? null,
     macros: m.macros,
     status: (m.status ?? 'active') as MealStatus,
-    chef_note: m.chef_note,
+    chef_note: m.chef_note ?? null,
+    key_ingredients: m.key_ingredients ?? null,
+    emoji: m.emoji ?? null,
+    photo_url: m.photo_url ?? null,
+    already_used: m.already_used ?? false,
+    used_on_day: m.used_on_day ?? null,
   }));
 export type Meal = z.infer<typeof MealSchema>;
 
@@ -151,10 +159,10 @@ export const WeekSchema = z
 export type Week = z.infer<typeof WeekSchema>;
 
 export const CreateMealInputSchema = z.object({
-  name_en: z.string().min(1, 'Meal name is required'),
-  name_ar: z.string().optional(),
+  name_en: z.string().min(1, 'Meal name is required').max(80),
+  name_ar: z.string().max(80).optional(),
   meal_type: z.enum(['executive', 'salad']),
-  kcal: z.number().optional(),
+  kcal: z.number().int().positive().optional(),
   macros: z
     .object({
       protein_g: z.number(),
@@ -162,12 +170,38 @@ export const CreateMealInputSchema = z.object({
       fat_g: z.number(),
     })
     .optional(),
-  notes_en: z.string().optional(),
+  chef_note: z.string().optional(),
+  key_ingredients: z.string().optional(),
+  emoji: z.string().optional(),
 });
 export type CreateMealInput = z.infer<typeof CreateMealInputSchema>;
 
-export const UpdateMealInputSchema = CreateMealInputSchema.partial();
+export const UpdateMealInputSchema = CreateMealInputSchema.partial().extend({
+  photo_url: z.string().nullable().optional(),
+});
 export type UpdateMealInput = z.infer<typeof UpdateMealInputSchema>;
+
+export const PhotoUploadUrlResponseSchema = z.object({
+  upload_url: z.string(),
+  photo_url: z.string(),
+  expires_in_seconds: z.number(),
+});
+export type PhotoUploadUrlResponse = z.infer<typeof PhotoUploadUrlResponseSchema>;
+
+export const ImportRowErrorSchema = z.object({
+  row: z.number(),
+  field: z.string(),
+  message: z.string(),
+});
+export const ImportResultSchema = z.object({
+  imported_count: z.number(),
+  skipped_count: z.number(),
+  errors: z.array(ImportRowErrorSchema),
+  all_saved_as: z.string().optional(),
+  note: z.string().optional(),
+});
+export type ImportResult = z.infer<typeof ImportResultSchema>;
+export type ImportRowError = z.infer<typeof ImportRowErrorSchema>;
 
 /** Day abbreviation → display label */
 export const DAY_LABEL: Record<string, string> = {

@@ -1,10 +1,66 @@
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useWeeks, useWeekDetail, useMeals, useAssignSlot, useClearSlot, usePublishWeek, useUpdateMeal, useUpdateMealStatus } from '@/features/menu/api/menu.queries';
+import {
+  useWeeks,
+  useWeekDetail,
+  useMeals,
+  useMealsPicker,
+  useAssignSlot,
+  useClearSlot,
+  usePublishWeek,
+  useUpdateMeal,
+  useUpdateMealStatus,
+  usePhotoUpload,
+} from '@/features/menu/api/menu.queries';
 import type { Meal, MealType, Slot, Week } from '@/features/menu/model/menu.schema';
 import { DAY_LABEL } from '@/features/menu/model/menu.schema';
+import { ApiError } from '@/shared/types/api';
 
 type LibraryFilter = 'all' | 'executive' | 'salad';
+
+const EMOJI_OPTIONS = ['🍛', '🥘', '🍗', '🥗', '🥙', '🍖'];
+const ACCEPTED_PHOTO_TYPES = 'image/jpeg,image/png,image/webp';
+
+/** Renders a meal's photo thumbnail, emoji, or a type-based fallback emoji. */
+function MealIcon({ meal, size = 40 }: { meal: Meal; size?: number }) {
+  const fallback = meal.meal_type === 'executive' ? '🍛' : '🥗';
+  if (meal.photo_url) {
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: '8px',
+          overflow: 'hidden',
+          flexShrink: 0,
+        }}
+      >
+        <img
+          src={meal.photo_url}
+          alt={meal.name_en}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      </div>
+    );
+  }
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '8px',
+        background: 'linear-gradient(135deg, #E4281D, #F5A623)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: size * 0.5,
+        flexShrink: 0,
+      }}
+    >
+      {meal.emoji ?? fallback}
+    </div>
+  );
+}
 
 export default function MenuManager() {
   const navigate = useNavigate();
@@ -15,6 +71,8 @@ export default function MenuManager() {
   const [libraryFilter, setLibraryFilter] = useState<LibraryFilter>('all');
   const [confirmClearSlotId, setConfirmClearSlotId] = useState<string | null>(null);
   const [confirmStatusMealId, setConfirmStatusMealId] = useState<string | null>(null);
+  // Shown when deactivating a meal that's in a published week (409 response)
+  const [publishedMealConfirm, setPublishedMealConfirm] = useState<Meal | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const { data: weeks = [], isLoading: weeksLoading } = useWeeks();
@@ -56,13 +114,33 @@ export default function MenuManager() {
 
   const handleStatusChange = (meal: Meal) => {
     setErrorMsg(null);
+    const nextStatus = meal.status === 'active' ? 'draft' : 'active';
     updateMealStatus.mutate(
-      { id: meal.id, status: meal.status === 'active' ? 'draft' : 'active' },
+      { id: meal.id, status: nextStatus },
       {
         onSuccess: () => setConfirmStatusMealId(null),
         onError: (err) => {
           setConfirmStatusMealId(null);
-          setErrorMsg(err instanceof Error ? err.message : 'Failed to update meal status');
+          if (err instanceof ApiError && err.statusCode === 409) {
+            setPublishedMealConfirm(meal);
+            return;
+          }
+          setErrorMsg(err instanceof ApiError ? err.message : 'Failed to update meal status');
+        },
+      },
+    );
+  };
+
+  const handleStatusChangeForce = (meal: Meal) => {
+    setErrorMsg(null);
+    const nextStatus = meal.status === 'active' ? 'draft' : 'active';
+    updateMealStatus.mutate(
+      { id: meal.id, status: nextStatus, confirmPublishedEdit: true },
+      {
+        onSuccess: () => setPublishedMealConfirm(null),
+        onError: (err) => {
+          setPublishedMealConfirm(null);
+          setErrorMsg(err instanceof ApiError ? err.message : 'Failed to update meal status');
         },
       },
     );
@@ -197,24 +275,16 @@ export default function MenuManager() {
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                              <div
-                                style={{
-                                  width: '44px',
-                                  height: '44px',
-                                  borderRadius: '8px',
-                                  background: 'linear-gradient(135deg, #E4281D, #F5A623)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  fontSize: '24px',
-                                }}
-                              >
-                                {slot.meal_type === 'executive' ? '🍛' : '🥗'}
-                              </div>
+                              <MealIcon meal={slot.meal} size={44} />
                               <div>
-                                <h4 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>
+                                <h4 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '2px' }}>
                                   {slot.meal.name_en}
                                 </h4>
+                                {slot.meal.name_ar && (
+                                  <p style={{ fontSize: '13px', color: '#9CA3AF', margin: '0 0 2px', direction: 'rtl', textAlign: 'left' }}>
+                                    {slot.meal.name_ar}
+                                  </p>
+                                )}
                                 <span style={{ fontSize: '13px', color: '#9CA3AF' }}>
                                   {slot.meal_type === 'executive' ? 'Executive' : 'Salad'}
                                   {slot.meal.kcal ? ` · ${slot.meal.kcal} kcal` : ''}
@@ -410,25 +480,17 @@ export default function MenuManager() {
                       opacity: meal.status === 'draft' ? 0.6 : 1,
                     }}
                   >
-                    <div
-                      style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '8px',
-                        background: 'linear-gradient(135deg, #E4281D, #F5A623)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '20px',
-                        marginRight: '16px',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {meal.meal_type === 'executive' ? '🍛' : '🥗'}
-                    </div>
+                    <MealIcon meal={meal} size={40} />
 
-                    <div style={{ flex: 1 }}>
-                      <h4 style={{ fontWeight: 600, fontSize: '15px' }}>{meal.name_en}</h4>
+                    <div style={{ flex: 1, marginLeft: '16px' }}>
+                      <h4 style={{ fontWeight: 600, fontSize: '15px', marginBottom: meal.name_ar ? '2px' : 0 }}>
+                        {meal.name_en}
+                      </h4>
+                      {meal.name_ar && (
+                        <p style={{ fontSize: '13px', color: '#9CA3AF', margin: '0 0 2px', direction: 'rtl', textAlign: 'left' }}>
+                          {meal.name_ar}
+                        </p>
+                      )}
                       <div style={{ fontSize: '13px', color: '#9CA3AF' }}>
                         {meal.meal_type === 'executive' ? 'Executive' : 'Salad'}
                         {meal.kcal ? ` · ${meal.kcal} kcal` : ''}
@@ -540,11 +602,11 @@ export default function MenuManager() {
         </div>
       )}
 
+      {/* Assign Dish Modal */}
       {assignModalSlot && currentWeek && (
         <AssignDishModal
           slot={assignModalSlot}
-          library={meals.filter((m) => m.status === 'active')}
-          weekSlots={slots}
+          weekId={currentWeek.id}
           isPending={assignSlot.isPending}
           onClose={() => setAssignModalSlot(null)}
           onAssign={(meal: Meal) => {
@@ -563,6 +625,7 @@ export default function MenuManager() {
         />
       )}
 
+      {/* Edit Meal Modal */}
       {editMeal && (
         <EditMealModal
           meal={editMeal}
@@ -582,6 +645,71 @@ export default function MenuManager() {
             );
           }}
         />
+      )}
+
+      {/* 409 Published-week deactivation confirmation */}
+      {publishedMealConfirm && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 200,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#1A1A1A',
+              border: '1px solid #333',
+              borderRadius: '16px',
+              padding: '32px',
+              maxWidth: '480px',
+              width: '90%',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: '18px', fontFamily: 'Montserrat, sans-serif' }}>
+              Meal is in a published week
+            </h3>
+            <p style={{ margin: 0, color: '#9CA3AF', fontSize: '14px', lineHeight: 1.6 }}>
+              <strong style={{ color: '#FFF' }}>{publishedMealConfirm.name_en}</strong> is assigned
+              to a published week. Deactivating it will not remove it from that week, but it won't be
+              available for new slot assignments. Continue?
+            </p>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+              <button
+                className="btn-ghost"
+                style={{ flex: 1 }}
+                onClick={() => setPublishedMealConfirm(null)}
+              >
+                Cancel
+              </button>
+              <button
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  borderRadius: '8px',
+                  backgroundColor: '#444',
+                  color: '#FFF',
+                  border: 'none',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  opacity: updateMealStatus.isPending ? 0.6 : 1,
+                }}
+                disabled={updateMealStatus.isPending}
+                onClick={() => handleStatusChangeForce(publishedMealConfirm)}
+              >
+                {updateMealStatus.isPending ? '…' : 'Deactivate anyway'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -616,15 +744,13 @@ function TabButton({
 
 function AssignDishModal({
   slot,
-  library,
-  weekSlots,
+  weekId,
   isPending,
   onClose,
   onAssign,
 }: {
   slot: Slot;
-  library: Meal[];
-  weekSlots: Slot[];
+  weekId: string;
   isPending: boolean;
   onClose: () => void;
   onAssign: (meal: Meal) => void;
@@ -632,12 +758,11 @@ function AssignDishModal({
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Meal | null>(null);
 
-  const assignedMealIds = new Set(
-    weekSlots.filter((s) => s.id !== slot.id && s.meal).map((s) => s.meal!.id),
-  );
+  const { data: pickerMeals = [], isLoading } = useMealsPicker(weekId);
 
-  const filtered = library.filter((m) =>
-    m.name_en.toLowerCase().includes(search.toLowerCase()),
+  const filtered = pickerMeals.filter((m) =>
+    m.name_en.toLowerCase().includes(search.toLowerCase()) ||
+    (m.name_ar ?? '').toLowerCase().includes(search.toLowerCase()),
   );
 
   const dayLabel = DAY_LABEL[slot.day] ?? slot.day.toUpperCase();
@@ -696,6 +821,12 @@ function AssignDishModal({
           style={{ width: '100%', marginBottom: '24px' }}
         />
 
+        {isLoading && (
+          <div style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF', fontSize: '14px' }}>
+            Loading meals…
+          </div>
+        )}
+
         <div
           style={{
             flex: 1,
@@ -708,7 +839,7 @@ function AssignDishModal({
           }}
         >
           {filtered.map((meal) => {
-            const isUsed = assignedMealIds.has(meal.id);
+            const isUsed = meal.already_used;
             return (
               <div
                 key={meal.id}
@@ -721,26 +852,20 @@ function AssignDishModal({
                   border: `1px solid ${selected?.id === meal.id ? 'var(--danger)' : '#333'}`,
                   backgroundColor: selected?.id === meal.id ? 'rgba(0, 200, 150, 0.05)' : '#222',
                   cursor: 'pointer',
+                  opacity: isUsed ? 0.5 : 1,
                 }}
               >
-                <div
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '8px',
-                    background: 'linear-gradient(135deg, #E4281D, #F5A623)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '20px',
-                    marginRight: '16px',
-                  }}
-                >
-                  {meal.meal_type === 'executive' ? '🍛' : '🥗'}
-                </div>
+                <MealIcon meal={meal} size={40} />
 
-                <div style={{ flex: 1 }}>
-                  <h4 style={{ fontWeight: 600, fontSize: '15px' }}>{meal.name_en}</h4>
+                <div style={{ flex: 1, marginLeft: '16px' }}>
+                  <h4 style={{ fontWeight: 600, fontSize: '15px', marginBottom: meal.name_ar ? '2px' : 0 }}>
+                    {meal.name_en}
+                  </h4>
+                  {meal.name_ar && (
+                    <p style={{ fontSize: '12px', color: '#9CA3AF', margin: '0 0 2px', direction: 'rtl', textAlign: 'left' }}>
+                      {meal.name_ar}
+                    </p>
+                  )}
                   <div style={{ fontSize: '13px', color: '#9CA3AF' }}>
                     {meal.meal_type === 'executive' ? 'Executive' : 'Salad'}
                     {meal.kcal ? ` · ${meal.kcal} kcal` : ''}
@@ -815,8 +940,21 @@ function EditMealModal({
   meal: Meal;
   isPending: boolean;
   onClose: () => void;
-  onSave: (input: { name_en?: string; name_ar?: string; meal_type?: MealType; kcal?: number; macros?: { protein_g: number; carbs_g: number; fat_g: number } }) => void;
+  onSave: (input: {
+    name_en?: string;
+    name_ar?: string;
+    meal_type?: MealType;
+    kcal?: number;
+    macros?: { protein_g: number; carbs_g: number; fat_g: number };
+    chef_note?: string;
+    key_ingredients?: string;
+    emoji?: string;
+    photo_url?: string | null;
+  }) => void;
 }) {
+  const uploadPhoto = usePhotoUpload();
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
   const [nameEn, setNameEn] = useState(meal.name_en);
   const [nameAr, setNameAr] = useState(meal.name_ar ?? '');
   const [mealType, setMealType] = useState<MealType>(meal.meal_type ?? 'executive');
@@ -824,6 +962,39 @@ function EditMealModal({
   const [proteinG, setProteinG] = useState(meal.macros?.protein_g.toString() ?? '');
   const [carbsG, setCarbsG] = useState(meal.macros?.carbs_g.toString() ?? '');
   const [fatG, setFatG] = useState(meal.macros?.fat_g.toString() ?? '');
+  const [chefNote, setChefNote] = useState(meal.chef_note ?? '');
+  const [keyIngredients, setKeyIngredients] = useState(meal.key_ingredients ?? '');
+  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(meal.emoji ?? null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(meal.photo_url ?? null);
+  const [photoError, setPhotoError] = useState('');
+
+  const isSubmitting = isPending || uploadPhoto.isPending;
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+    setPhotoError('');
+  };
+
+  const handleUploadPhoto = () => {
+    if (!photoFile) return;
+    setPhotoError('');
+    uploadPhoto.mutate(
+      { mealId: meal.id, file: photoFile },
+      {
+        onSuccess: (url) => {
+          setPhotoFile(null);
+          setPhotoPreview(url);
+        },
+        onError: (err) => {
+          setPhotoError(err instanceof ApiError ? err.message : 'Photo upload failed.');
+        },
+      },
+    );
+  };
 
   const handleSave = () => {
     if (!nameEn.trim()) return;
@@ -840,6 +1011,9 @@ function EditMealModal({
             fat_g: Number(fatG) || 0,
           }
         : undefined,
+      chef_note: chefNote.trim() || undefined,
+      key_ingredients: keyIngredients.trim() || undefined,
+      emoji: selectedEmoji ?? undefined,
     });
   };
 
@@ -905,6 +1079,7 @@ function EditMealModal({
           Edit Meal
         </h2>
 
+        {/* Bilingual names */}
         <div>
           <label style={labelStyle}>Name (EN) *</label>
           <input
@@ -925,6 +1100,7 @@ function EditMealModal({
           />
         </div>
 
+        {/* Type */}
         <div>
           <label style={labelStyle}>Type</label>
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -950,6 +1126,7 @@ function EditMealModal({
           </div>
         </div>
 
+        {/* Calories */}
         <div>
           <label style={labelStyle}>Calories (kcal)</label>
           <input
@@ -961,6 +1138,7 @@ function EditMealModal({
           />
         </div>
 
+        {/* Macros */}
         <div>
           <label style={labelStyle}>Macros (g)</label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
@@ -979,6 +1157,118 @@ function EditMealModal({
           </div>
         </div>
 
+        {/* Key Ingredients */}
+        <div>
+          <label style={labelStyle}>Key Ingredients</label>
+          <input
+            style={fieldStyle}
+            value={keyIngredients}
+            onChange={(e) => setKeyIngredients(e.target.value)}
+            placeholder="e.g. Lamb, Saffron rice, Dried lime"
+          />
+        </div>
+
+        {/* Chef's Note */}
+        <div>
+          <label style={labelStyle}>Chef's Note</label>
+          <textarea
+            value={chefNote}
+            onChange={(e) => setChefNote(e.target.value)}
+            placeholder="Heating or allergy notes…"
+            style={{
+              ...fieldStyle,
+              height: '72px',
+              fontFamily: 'Montserrat, sans-serif',
+              resize: 'vertical',
+            }}
+          />
+        </div>
+
+        {/* Emoji */}
+        <div>
+          <label style={labelStyle}>Emoji (fallback when no photo)</label>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {EMOJI_OPTIONS.map((emoji) => (
+              <button
+                key={emoji}
+                onClick={() => setSelectedEmoji(selectedEmoji === emoji ? null : emoji)}
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  fontSize: '20px',
+                  backgroundColor: selectedEmoji === emoji ? 'rgba(228,40,29,.10)' : '#222',
+                  borderRadius: '8px',
+                  border: selectedEmoji === emoji ? '2px solid var(--danger)' : '1px solid #444',
+                  cursor: 'pointer',
+                }}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Photo */}
+        <div>
+          <label style={labelStyle}>Photo</label>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept={ACCEPTED_PHOTO_TYPES}
+            style={{ display: 'none' }}
+            onChange={handlePhotoSelect}
+          />
+          {photoPreview ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <img
+                src={photoPreview}
+                alt="preview"
+                style={{ width: '56px', height: '56px', borderRadius: '8px', objectFit: 'cover' }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {photoFile && (
+                  <button
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      backgroundColor: 'var(--danger)',
+                      color: '#FFF',
+                      border: 'none',
+                      cursor: 'pointer',
+                      opacity: uploadPhoto.isPending ? 0.6 : 1,
+                    }}
+                    disabled={uploadPhoto.isPending}
+                    onClick={handleUploadPhoto}
+                  >
+                    {uploadPhoto.isPending ? 'Uploading…' : 'Upload photo'}
+                  </button>
+                )}
+                <button
+                  className="btn-ghost"
+                  style={{ padding: '4px 10px', fontSize: '12px' }}
+                  onClick={() => photoInputRef.current?.click()}
+                >
+                  Change
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              className="btn-ghost"
+              style={{ padding: '8px 14px', fontSize: '13px' }}
+              onClick={() => photoInputRef.current?.click()}
+            >
+              📷 Choose photo
+            </button>
+          )}
+          {photoError && (
+            <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#F87171' }}>{photoError}</p>
+          )}
+        </div>
+
+        {/* Actions */}
         <div style={{ display: 'flex', gap: '12px', paddingTop: '8px' }}>
           <button
             className="btn-ghost"
@@ -989,8 +1279,8 @@ function EditMealModal({
           </button>
           <button
             className="btn-primary"
-            style={{ flex: 2, opacity: isPending ? 0.7 : 1 }}
-            disabled={!nameEn.trim() || isPending}
+            style={{ flex: 2, opacity: isSubmitting ? 0.7 : 1 }}
+            disabled={!nameEn.trim() || isSubmitting}
             onClick={handleSave}
           >
             {isPending ? 'Saving…' : '✓ Save Changes'}

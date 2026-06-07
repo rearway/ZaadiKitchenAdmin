@@ -9,6 +9,7 @@ export const queryKeys = {
     weeks: ['menu', 'weeks'] as const,
     weekDetail: (weekId: string) => ['menu', 'weeks', weekId] as const,
     meals: ['menu', 'meals'] as const,
+    mealsPicker: (weekId: string) => ['menu', 'meals', 'picker', weekId] as const,
   },
   customers: {
     all: ['customers'] as const,

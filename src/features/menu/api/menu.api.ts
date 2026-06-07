@@ -5,6 +5,8 @@ import {
   WeekSchema,
   WeekDetailApiSchema,
   MealSchema,
+  PhotoUploadUrlResponseSchema,
+  ImportResultSchema,
   type CreateMealInput,
   type UpdateMealInput,
   type WeekDetail,
@@ -49,6 +51,14 @@ export async function getMealsApi(status?: string) {
   return unwrap(res.data, z.object({ meals: z.array(MealSchema) }).transform((d) => d.meals));
 }
 
+/** Meal picker: returns active meals with already_used flag for the given week. */
+export async function getMealsPickerApi(weekId: string) {
+  const res = await client.get('/admin/meals', {
+    params: { context: 'picker', exclude_week_id: weekId },
+  });
+  return unwrap(res.data, z.object({ meals: z.array(MealSchema) }).transform((d) => d.meals));
+}
+
 export async function assignSlotApi(weekId: string, slotId: string, mealId: string) {
   const res = await client.post(`/admin/menu/weeks/${weekId}/slots/${slotId}/assign`, { meal_id: mealId });
   return unwrap(res.data, z.object({ id: z.string() }).passthrough());
@@ -72,7 +82,44 @@ export async function updateMealApi(mealId: string, input: UpdateMealInput) {
   return unwrap(res.data, MealSchema);
 }
 
-export async function updateMealStatusApi(mealId: string, status: 'active' | 'draft') {
-  const res = await client.patch(`/admin/meals/${mealId}/status`, { status });
+export async function updateMealStatusApi(
+  mealId: string,
+  status: 'active' | 'draft',
+  confirmPublishedEdit?: boolean,
+) {
+  const body: { status: string; confirm_published_edit?: boolean } = { status };
+  if (confirmPublishedEdit) body.confirm_published_edit = true;
+  const res = await client.patch(`/admin/meals/${mealId}/status`, body);
   return unwrap(res.data, MealSchema);
+}
+
+/** Step 1 of 3-step S3 photo upload: get a presigned URL from the API. */
+export async function getPhotoUploadUrlApi(
+  mealId: string,
+  contentType: 'image/jpeg' | 'image/png' | 'image/webp',
+) {
+  const res = await client.get(`/admin/meals/${mealId}/photo-upload-url`, {
+    params: { content_type: contentType },
+  });
+  return unwrap(res.data, PhotoUploadUrlResponseSchema);
+}
+
+/** Step 2 of 3-step S3 photo upload: PUT the file directly to the S3 presigned URL. */
+export async function uploadToS3Api(uploadUrl: string, file: File) {
+  const res = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.type },
+    body: file,
+  });
+  if (!res.ok) throw new Error(`S3 upload failed: ${res.status}`);
+}
+
+/** XLSX bulk import: POST multipart/form-data with field name "file". */
+export async function importMealsApi(file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await client.post('/admin/meals/import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return unwrap(res.data, ImportResultSchema);
 }

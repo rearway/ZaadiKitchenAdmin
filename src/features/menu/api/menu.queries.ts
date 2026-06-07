@@ -4,12 +4,16 @@ import {
   getWeeksApi,
   getWeekDetailApi,
   getMealsApi,
+  getMealsPickerApi,
   assignSlotApi,
   clearSlotApi,
   publishWeekApi,
   createMealApi,
   updateMealApi,
   updateMealStatusApi,
+  getPhotoUploadUrlApi,
+  uploadToS3Api,
+  importMealsApi,
 } from './menu.api';
 import type { CreateMealInput, UpdateMealInput } from '../model/menu.schema';
 
@@ -32,6 +36,15 @@ export function useMeals(status?: string) {
   return useQuery({
     queryKey: [...queryKeys.menu.meals, status],
     queryFn: () => getMealsApi(status),
+  });
+}
+
+/** Returns active meals with already_used flag for the given week (for the meal picker modal). */
+export function useMealsPicker(weekId: string) {
+  return useQuery({
+    queryKey: queryKeys.menu.mealsPicker(weekId),
+    queryFn: () => getMealsPickerApi(weekId),
+    enabled: !!weekId,
   });
 }
 
@@ -84,8 +97,44 @@ export function useUpdateMeal() {
 export function useUpdateMealStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'active' | 'draft' }) =>
-      updateMealStatusApi(id, status),
+    mutationFn: ({
+      id,
+      status,
+      confirmPublishedEdit,
+    }: {
+      id: string;
+      status: 'active' | 'draft';
+      confirmPublishedEdit?: boolean;
+    }) => updateMealStatusApi(id, status, confirmPublishedEdit),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.menu.meals }),
+  });
+}
+
+/**
+ * 3-step S3 photo upload:
+ *  1. GET presigned URL from API
+ *  2. PUT file directly to S3
+ *  3. PATCH meal with the returned photo_url
+ */
+export function usePhotoUpload() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ mealId, file }: { mealId: string; file: File }) => {
+      const contentType = file.type as 'image/jpeg' | 'image/png' | 'image/webp';
+      const { upload_url, photo_url } = await getPhotoUploadUrlApi(mealId, contentType);
+      await uploadToS3Api(upload_url, file);
+      await updateMealApi(mealId, { photo_url });
+      return photo_url;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.menu.meals }),
+  });
+}
+
+/** XLSX bulk import. All imported meals are saved as draft. */
+export function useImportMeals() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => importMealsApi(file),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.menu.meals }),
   });
 }
