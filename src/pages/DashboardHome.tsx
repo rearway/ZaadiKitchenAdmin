@@ -62,7 +62,7 @@ export default function DashboardHome() {
         <h1 style={{ fontSize: '32px', fontFamily: 'Montserrat, sans-serif', marginBottom: '8px' }}>
           Good morning, Admin 👋
         </h1>
-        <p style={{ color: '#9CA3AF', fontSize: '16px' }}>Zaadi Kitchen · Riyadh Operations</p>
+        <p style={{ color: '#9CA3AF', fontSize: '16px' }}>Platio Kitchen · Riyadh Operations</p>
       </div>
 
       {/* 2x3 Tile Grid */}

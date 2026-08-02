@@ -312,7 +312,7 @@ function LabelPreviewModal({ label, onClose }: LabelPreviewModalProps) {
             }}
           >
             <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '20px' }}>
-              Zaadi<span style={{ color: 'var(--danger)' }}>.</span>
+              Platio<span style={{ color: 'var(--danger)' }}>.</span>
             </div>
             <div style={{ fontSize: '12px', letterSpacing: '1px' }}>
               KITCHEN · FRESH DAILY LUNCH

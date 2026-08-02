@@ -51,7 +51,7 @@ export default function Comms() {
 
   const [segment, setSegment] = useState('All active');
   const [message, setMessage] = useState(
-    'Hope you enjoyed your Zaadi lunch! 🍛 Share your thoughts with us to get 10% off your next renewal.'
+    'Hope you enjoyed your Platio lunch! 🍛 Share your thoughts with us to get 10% off your next renewal.'
   );
 
   const getRecipientCount = () => {

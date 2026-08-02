@@ -84,7 +84,7 @@ export default function Login() {
         {/* Header */}
         <div style={{ textAlign: 'center' }}>
           <h1 style={{ fontSize: '32px', marginBottom: '8px' }}>
-            Zaadi<span style={{ color: 'var(--danger)' }}>.</span> Ops Portal
+            Platio<span style={{ color: 'var(--danger)' }}>.</span> Ops Portal
           </h1>
           <p style={{ color: '#9CA3AF', fontSize: '14px' }}>Internal team access only</p>
         </div>
@@ -121,7 +121,7 @@ export default function Login() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@zaadikitchen.com"
+                  placeholder="name@platiokitchen.com"
                   style={{ width: '100%', fontSize: '16px' }}
                   required
                 />

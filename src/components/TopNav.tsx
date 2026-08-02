@@ -43,7 +43,7 @@ export default function TopNav({ user }: Props) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         {!isAdmin && (
           <h2 style={{ fontSize: '24px', fontFamily: 'Montserrat, sans-serif', margin: 0 }}>
-            Zaadi<span style={{ color: 'var(--danger)' }}>.</span> Ops
+            Platio<span style={{ color: 'var(--danger)' }}>.</span> Ops
           </h2>
         )}
       </div>

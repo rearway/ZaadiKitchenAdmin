@@ -23,7 +23,7 @@ export const useSessionStore = create<SessionState>()(
       clearSession: () => set({ user: null, accessToken: null, refreshToken: null }),
     }),
     {
-      name: 'zaadi-session',
+      name: 'platio-session',
       storage: createJSONStorage(() => localStorage),
       // accessToken is ephemeral — only refreshToken + user are persisted
       partialize: (state) => ({
