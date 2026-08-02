@@ -1,14 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import DashboardLayout from './layouts/DashboardLayout';
-import DailyOps from './pages/DailyOps';
+import DailyOps from './features/daily-ops/pages/DailyOps';
 import DashboardHome from './pages/DashboardHome';
 import RevenueDashboard from './pages/RevenueDashboard';
 import MenuManager from './pages/MenuManager';
 import CustomerManagement from './pages/CustomerManagement';
 import Comms from './pages/Comms';
 import AreaManagement from './pages/AreaManagement';
-import PrintLabels from './pages/PrintLabels';
+import PrintLabels from './features/labels/pages/PrintLabels';
 import AddDish from './pages/AddDish';
 import AddArea from './pages/AddArea';
 import BuildingManagement from './pages/BuildingManagement';

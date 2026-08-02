@@ -1,4 +1,5 @@
 import type { GetCustomersParams } from '@/features/customers/api/customers.api';
+import type { GetLabelsParams } from '@/features/labels/api/labels.api';
 
 export const queryKeys = {
   areas: {
@@ -16,5 +17,12 @@ export const queryKeys = {
     list: (params: GetCustomersParams) => ['customers', 'list', params] as const,
     detail: (id: string) => ['customers', id] as const,
     history: (id: string) => ['customers', id, 'history'] as const,
+  },
+  dailyOps: {
+    detail: ['dailyOps'] as const,
+    issues: ['dailyOps', 'issues'] as const,
+  },
+  labels: {
+    list: (params: GetLabelsParams) => ['labels', 'list', params] as const,
   },
 } as const;

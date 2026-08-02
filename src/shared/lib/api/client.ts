@@ -23,6 +23,16 @@ client.interceptors.response.use(
   async (error: unknown) => {
     if (!axios.isAxiosError(error)) return Promise.reject(error);
 
+    // Blob-typed requests (PDF/XLSX downloads) get a Blob error body on failure too —
+    // decode it back to JSON so the message-extraction logic below still works.
+    if (error.response?.data instanceof Blob) {
+      try {
+        error.response.data = JSON.parse(await error.response.data.text());
+      } catch {
+        // Not JSON (e.g. an actual binary error page) — leave as-is, message extraction falls back below.
+      }
+    }
+
     const original = error.config as typeof error.config & { _retry?: boolean };
     const status = error.response?.status;
 
