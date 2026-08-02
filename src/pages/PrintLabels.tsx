@@ -311,9 +311,7 @@ function LabelPreviewModal({ label, onClose }: LabelPreviewModalProps) {
               alignItems: 'center',
             }}
           >
-            <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '20px' }}>
-              Platio<span style={{ color: 'var(--danger)' }}>.</span>
-            </div>
+            <img src="/brand/platio-logo-white.svg" alt="Platio" style={{ height: '18px', width: 'auto' }} />
             <div style={{ fontSize: '12px', letterSpacing: '1px' }}>
               KITCHEN · FRESH DAILY LUNCH
             </div>

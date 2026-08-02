@@ -83,8 +83,18 @@ export default function Login() {
       >
         {/* Header */}
         <div style={{ textAlign: 'center' }}>
-          <h1 style={{ fontSize: '32px', marginBottom: '8px' }}>
-            Platio<span style={{ color: 'var(--danger)' }}>.</span> Ops Portal
+          <h1
+            style={{
+              fontSize: '32px',
+              marginBottom: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+            }}
+          >
+            <img src="/brand/platio-logo-white.svg" alt="Platio" style={{ height: '28px', width: 'auto' }} />
+            Ops Portal
           </h1>
           <p style={{ color: '#9CA3AF', fontSize: '14px' }}>Internal team access only</p>
         </div>

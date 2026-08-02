@@ -49,8 +49,18 @@ export default function Sidebar() {
       }}
     >
       <div style={{ padding: '24px', borderBottom: '1px solid #222222' }}>
-        <h2 style={{ fontSize: '24px', fontFamily: 'Montserrat, sans-serif', margin: 0 }}>
-          Platio<span style={{ color: 'var(--danger)' }}>.</span> Ops
+        <h2
+          style={{
+            fontSize: '24px',
+            fontFamily: 'Montserrat, sans-serif',
+            margin: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <img src="/brand/platio-logo-white.svg" alt="Platio" style={{ height: '20px', width: 'auto' }} />
+          Ops
         </h2>
       </div>
       <nav

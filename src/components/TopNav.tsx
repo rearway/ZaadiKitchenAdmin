@@ -42,8 +42,18 @@ export default function TopNav({ user }: Props) {
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         {!isAdmin && (
-          <h2 style={{ fontSize: '24px', fontFamily: 'Montserrat, sans-serif', margin: 0 }}>
-            Platio<span style={{ color: 'var(--danger)' }}>.</span> Ops
+          <h2
+            style={{
+              fontSize: '24px',
+              fontFamily: 'Montserrat, sans-serif',
+              margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <img src="/brand/platio-logo-white.svg" alt="Platio" style={{ height: '20px', width: 'auto' }} />
+            Ops
           </h2>
         )}
       </div>
