@@ -61,7 +61,7 @@ export async function getMealsPickerApi(weekId: string) {
 
 export async function assignSlotApi(weekId: string, slotId: string, mealId: string) {
   const res = await client.post(`/admin/menu/weeks/${weekId}/slots/${slotId}/assign`, { meal_id: mealId });
-  return unwrap(res.data, z.object({ id: z.string() }).passthrough());
+  return unwrap(res.data, z.object({ slot_id: z.string() }).passthrough());
 }
 
 export async function clearSlotApi(weekId: string, slotId: string) {
