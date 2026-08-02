@@ -13,7 +13,7 @@ import {
   usePhotoUpload,
 } from '@/features/menu/api/menu.queries';
 import type { Meal, MealType, Slot, Week } from '@/features/menu/model/menu.schema';
-import { DAY_LABEL } from '@/features/menu/model/menu.schema';
+import { DAY_LABEL, toKeyIngredientsArray } from '@/features/menu/model/menu.schema';
 import { ApiError } from '@/shared/types/api';
 
 type LibraryFilter = 'all' | 'executive' | 'salad';
@@ -947,7 +947,7 @@ function EditMealModal({
     kcal?: number;
     macros?: { protein_g: number; carbs_g: number; fat_g: number };
     chef_note?: string;
-    key_ingredients?: string;
+    key_ingredients?: string[];
     emoji?: string;
     photo_url?: string | null;
   }) => void;
@@ -1012,7 +1012,7 @@ function EditMealModal({
           }
         : undefined,
       chef_note: chefNote.trim() || undefined,
-      key_ingredients: keyIngredients.trim() || undefined,
+      key_ingredients: toKeyIngredientsArray(keyIngredients),
       emoji: selectedEmoji ?? undefined,
     });
   };

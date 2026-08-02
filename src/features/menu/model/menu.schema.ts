@@ -47,7 +47,7 @@ export const MealSchema = z
     macros: MacrosSchema.optional(),
     status: MealStatusSchema.optional(),
     chef_note: z.string().nullable().optional(),
-    key_ingredients: z.string().nullable().optional(),
+    key_ingredients: z.union([z.string(), z.array(z.string())]).nullable().optional(),
     emoji: z.string().nullable().optional(),
     photo_url: z.string().nullable().optional(),
     already_used: z.boolean().nullable().optional(),
@@ -62,7 +62,9 @@ export const MealSchema = z
     macros: m.macros,
     status: (m.status ?? 'active') as MealStatus,
     chef_note: m.chef_note ?? null,
-    key_ingredients: m.key_ingredients ?? null,
+    key_ingredients: Array.isArray(m.key_ingredients)
+      ? m.key_ingredients.join(', ')
+      : (m.key_ingredients ?? null),
     emoji: m.emoji ?? null,
     photo_url: m.photo_url ?? null,
     already_used: m.already_used ?? false,
@@ -171,7 +173,7 @@ export const CreateMealInputSchema = z.object({
     })
     .optional(),
   chef_note: z.string().optional(),
-  key_ingredients: z.string().optional(),
+  key_ingredients: z.array(z.string()).optional(),
   emoji: z.string().optional(),
 });
 export type CreateMealInput = z.infer<typeof CreateMealInputSchema>;
@@ -180,6 +182,15 @@ export const UpdateMealInputSchema = CreateMealInputSchema.partial().extend({
   photo_url: z.string().nullable().optional(),
 });
 export type UpdateMealInput = z.infer<typeof UpdateMealInputSchema>;
+
+/** UI collects key ingredients as one comma-separated field; the API wants an array. */
+export function toKeyIngredientsArray(text: string): string[] | undefined {
+  const items = text
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return items.length ? items : undefined;
+}
 
 export const PhotoUploadUrlResponseSchema = z.object({
   upload_url: z.string(),

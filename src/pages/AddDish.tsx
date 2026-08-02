@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCreateMeal, usePhotoUpload, useImportMeals } from '@/features/menu/api/menu.queries';
+import { toKeyIngredientsArray } from '@/features/menu/model/menu.schema';
 import type { MealType, ImportResult } from '@/features/menu/model/menu.schema';
 import { ApiError } from '@/shared/types/api';
 
@@ -75,7 +76,7 @@ export default function AddDish() {
             }
           : undefined,
         chef_note: chefNote.trim() || undefined,
-        key_ingredients: keyIngredients.trim() || undefined,
+        key_ingredients: toKeyIngredientsArray(keyIngredients),
         emoji: selectedEmoji ?? undefined,
       });
 
