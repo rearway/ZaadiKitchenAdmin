@@ -8,6 +8,7 @@ import {
   assignSlotApi,
   clearSlotApi,
   publishWeekApi,
+  unpublishWeekApi,
   createMealApi,
   updateMealApi,
   updateMealStatusApi,
@@ -69,6 +70,18 @@ export function usePublishWeek() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (weekId: string) => publishWeekApi(weekId),
+    onSuccess: (_, weekId) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: queryKeys.menu.weeks }),
+        qc.invalidateQueries({ queryKey: queryKeys.menu.weekDetail(weekId) }),
+      ]),
+  });
+}
+
+export function useUnpublishWeek() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (weekId: string) => unpublishWeekApi(weekId),
     onSuccess: (_, weekId) =>
       Promise.all([
         qc.invalidateQueries({ queryKey: queryKeys.menu.weeks }),

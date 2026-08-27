@@ -72,6 +72,10 @@ export async function publishWeekApi(weekId: string) {
   await client.post(`/admin/menu/weeks/${weekId}/publish`);
 }
 
+export async function unpublishWeekApi(weekId: string) {
+  await client.post(`/admin/menu/weeks/${weekId}/unpublish`);
+}
+
 export async function createMealApi(input: CreateMealInput) {
   const formData = new FormData();
   formData.append('name_en', input.name_en);

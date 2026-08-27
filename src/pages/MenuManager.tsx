@@ -8,6 +8,7 @@ import {
   useAssignSlot,
   useClearSlot,
   usePublishWeek,
+  useUnpublishWeek,
   useUpdateMeal,
   useUpdateMealStatus,
   usePhotoUpload,
@@ -71,6 +72,7 @@ export default function MenuManager() {
   const [libraryFilter, setLibraryFilter] = useState<LibraryFilter>('all');
   const [confirmClearSlotId, setConfirmClearSlotId] = useState<string | null>(null);
   const [confirmStatusMealId, setConfirmStatusMealId] = useState<string | null>(null);
+  const [confirmUnpublish, setConfirmUnpublish] = useState(false);
   // Shown when deactivating a meal that's in a published week (409 response)
   const [publishedMealConfirm, setPublishedMealConfirm] = useState<Meal | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -81,6 +83,7 @@ export default function MenuManager() {
   const currentWeek: Week | undefined = weeks[weekIndex];
   const { data: weekDetail, isLoading: slotsLoading } = useWeekDetail(currentWeek?.id ?? '');
   const publishWeek = usePublishWeek();
+  const unpublishWeek = useUnpublishWeek();
   const assignSlot = useAssignSlot(currentWeek?.id ?? '');
   const clearSlot = useClearSlot(currentWeek?.id ?? '');
   const updateMeal = useUpdateMeal();
@@ -412,21 +415,93 @@ export default function MenuManager() {
                 <span>⚠️</span> {weekDetail.publishBlockedReason}
               </div>
             )}
-            <button
-              className="btn-primary"
-              style={{ padding: '12px 32px', fontSize: '16px', opacity: publishWeek.isPending ? 0.7 : 1 }}
-              disabled={publishWeek.isPending}
-              onClick={() => {
-                if (!currentWeek) return;
-                setErrorMsg(null);
-                publishWeek.mutate(currentWeek.id, {
-                  onError: (err) =>
-                    setErrorMsg(err instanceof Error ? err.message : 'Failed to publish week'),
-                });
-              }}
-            >
-              {publishWeek.isPending ? 'Publishing…' : "📅 Publish Week's Menu"}
-            </button>
+            {weekDetail?.status === 'published' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '400px' }}>
+                <button
+                  style={{
+                    padding: '12px 32px',
+                    fontSize: '16px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(220,38,38,0.1)',
+                    color: 'var(--danger)',
+                    border: '1px solid rgba(220,38,38,0.3)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onClick={() => setConfirmUnpublish(true)}
+                >
+                  Unpublish Week
+                </button>
+                {confirmUnpublish && (
+                  <div
+                    style={{
+                      backgroundColor: 'rgba(220,38,38,0.06)',
+                      border: '1px solid rgba(220,38,38,0.2)',
+                      borderRadius: '8px',
+                      padding: '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px',
+                    }}
+                  >
+                    <span style={{ fontSize: '14px', color: '#F87171', lineHeight: 1.5 }}>
+                      Are you sure you want to unpublish this week? Customers will no longer see these meals until you publish it again.
+                    </span>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          fontWeight: 700,
+                          backgroundColor: 'var(--danger)',
+                          color: '#FFF',
+                          border: 'none',
+                          cursor: 'pointer',
+                          opacity: unpublishWeek.isPending ? 0.6 : 1,
+                        }}
+                        disabled={unpublishWeek.isPending}
+                        onClick={() => {
+                          if (!currentWeek) return;
+                          setErrorMsg(null);
+                          unpublishWeek.mutate(currentWeek.id, {
+                            onSuccess: () => setConfirmUnpublish(false),
+                            onError: (err) =>
+                              setErrorMsg(err instanceof Error ? err.message : 'Failed to unpublish week'),
+                          });
+                        }}
+                      >
+                        {unpublishWeek.isPending ? 'Unpublishing…' : 'Yes, Unpublish'}
+                      </button>
+                      <button
+                        className="btn-ghost"
+                        style={{ padding: '8px 16px', fontSize: '14px' }}
+                        onClick={() => setConfirmUnpublish(false)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                className="btn-primary"
+                style={{ padding: '12px 32px', fontSize: '16px', opacity: publishWeek.isPending ? 0.7 : 1 }}
+                disabled={publishWeek.isPending}
+                onClick={() => {
+                  if (!currentWeek) return;
+                  setErrorMsg(null);
+                  publishWeek.mutate(currentWeek.id, {
+                    onError: (err) =>
+                      setErrorMsg(err instanceof Error ? err.message : 'Failed to publish week'),
+                  });
+                }}
+              >
+                {publishWeek.isPending ? 'Publishing…' : "📅 Publish Week's Menu"}
+              </button>
+            )}
           </div>
         </div>
       ) : (
