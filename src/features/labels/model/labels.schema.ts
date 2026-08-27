@@ -15,7 +15,7 @@ export const LabelSchema = z.object({
 export type Label = z.infer<typeof LabelSchema>;
 
 export const LabelAreaGroupSchema = z.object({
-  area_id: z.string(),
+  area_id: z.string().nullable(),
   area_name: z.string(),
   count: z.number(),
   area_download_label: z.string().optional(),
