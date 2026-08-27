@@ -78,11 +78,8 @@ export default function AddDish() {
         chef_note: chefNote.trim() || undefined,
         key_ingredients: toKeyIngredientsArray(keyIngredients),
         emoji: selectedEmoji ?? undefined,
+        image: photoFile ?? undefined,
       });
-
-      if (photoFile && meal.id) {
-        await uploadPhoto.mutateAsync({ mealId: meal.id, file: photoFile });
-      }
 
       navigate('/menu');
     } catch (err) {
@@ -512,15 +509,11 @@ export default function AddDish() {
         <div style={{ marginTop: '16px', borderTop: '1px solid #333', paddingTop: '32px' }}>
           <button
             className="btn-primary"
-            style={{ padding: '16px 32px', fontSize: '16px', opacity: isSubmitting ? 0.7 : 1 }}
-            disabled={isSubmitting}
+            style={{ padding: '16px 32px', fontSize: '16px', opacity: createMeal.isPending ? 0.7 : 1 }}
+            disabled={createMeal.isPending}
             onClick={handleSubmit}
           >
-            {uploadPhoto.isPending
-              ? 'Uploading photo…'
-              : createMeal.isPending
-                ? 'Saving…'
-                : 'Add to Library (saves as Draft)'}
+            {createMeal.isPending ? 'Saving…' : 'Add to Library (saves as Draft)'}
           </button>
           <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '12px' }}>
             Saved as Draft. Activate in Meal Library to assign to weeks.

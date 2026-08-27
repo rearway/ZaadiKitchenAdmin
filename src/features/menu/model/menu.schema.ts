@@ -175,6 +175,7 @@ export const CreateMealInputSchema = z.object({
   chef_note: z.string().optional(),
   key_ingredients: z.array(z.string()).optional(),
   emoji: z.string().optional(),
+  image: z.instanceof(File).optional(),
 });
 export type CreateMealInput = z.infer<typeof CreateMealInputSchema>;
 
