@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCreateMeal, usePhotoUpload, useImportMeals } from '@/features/menu/api/menu.queries';
+import { useCreateMeal, useImportMeals } from '@/features/menu/api/menu.queries';
 import { toKeyIngredientsArray } from '@/features/menu/model/menu.schema';
 import type { MealType, ImportResult } from '@/features/menu/model/menu.schema';
 import { ApiError } from '@/shared/types/api';
@@ -11,7 +11,7 @@ const ACCEPTED_PHOTO_TYPES = 'image/jpeg,image/png,image/webp';
 export default function AddDish() {
   const navigate = useNavigate();
   const createMeal = useCreateMeal();
-  const uploadPhoto = usePhotoUpload();
+
   const importMeals = useImportMeals();
 
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -32,7 +32,7 @@ export default function AddDish() {
   const [error, setError] = useState('');
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
-  const isSubmitting = createMeal.isPending || uploadPhoto.isPending;
+
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -63,7 +63,7 @@ export default function AddDish() {
     const hasMacros = proteinG || carbsG || fatG;
 
     try {
-      const meal = await createMeal.mutateAsync({
+      await createMeal.mutateAsync({
         name_en: nameEn.trim(),
         name_ar: nameAr.trim() || undefined,
         meal_type: mealType,
