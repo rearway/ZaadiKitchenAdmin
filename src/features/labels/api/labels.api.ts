@@ -4,7 +4,7 @@ import { LabelsResponseSchema, type MealTypeFilter } from '../model/labels.schem
 
 export type GetLabelsParams = {
   mealType?: MealTypeFilter;
-  areaId?: string;
+  areaId?: string | null;
 };
 
 export type DownloadLabelsParams = GetLabelsParams & {
