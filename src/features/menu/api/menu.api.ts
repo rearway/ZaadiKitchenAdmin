@@ -86,7 +86,7 @@ export async function createMealApi(input: CreateMealInput) {
   if (input.chef_note) formData.append('chef_note', input.chef_note);
   
   if (input.key_ingredients) {
-    input.key_ingredients.forEach((ing) => formData.append('key_ingredients', ing));
+    input.key_ingredients.forEach((ing) => formData.append('key_ingredients[]', ing));
   }
   
   if (input.macros) {
