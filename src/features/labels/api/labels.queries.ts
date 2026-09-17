@@ -1,7 +1,14 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryKeys } from '@/shared/lib/api/queryKeys';
 import { triggerBlobDownload } from '@/shared/lib/download';
-import { getLabelsApi, downloadLabelsApi, exportDailyOpsApi, type GetLabelsParams, type DownloadLabelsParams } from './labels.api';
+import {
+  getLabelsApi,
+  downloadLabelsApi,
+  exportDailyOpsApi,
+  type GetLabelsParams,
+  type DownloadLabelsParams,
+  type ExportDailyOpsParams,
+} from './labels.api';
 
 export function useLabels(params: GetLabelsParams = {}) {
   return useQuery({
@@ -19,7 +26,7 @@ export function useDownloadLabels() {
 
 export function useExportDailyOps() {
   return useMutation({
-    mutationFn: () => exportDailyOpsApi(),
+    mutationFn: (params: ExportDailyOpsParams = {}) => exportDailyOpsApi(params),
     onSuccess: ({ blob, filename }) => triggerBlobDownload(blob, filename),
   });
 }

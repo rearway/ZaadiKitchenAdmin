@@ -23,13 +23,33 @@ export const LabelAreaGroupSchema = z.object({
 });
 export type LabelAreaGroup = z.infer<typeof LabelAreaGroupSchema>;
 
-export const LabelsResponseSchema = z.object({
-  date: z.string(),
-  total_count: z.number(),
-  filtered_count: z.number(),
-  bulk_download_label: z.string().optional(),
-  areas: z.array(LabelAreaGroupSchema),
-});
+export const LabelDayFilterSchema = z.enum(['today', 'tomorrow']);
+export type LabelDayFilter = z.infer<typeof LabelDayFilterSchema>;
+
+export const LabelsResponseSchema = z
+  .object({
+    date: z.string(),
+    date_label: z.string().optional(),
+    dateLabel: z.string().optional(),
+    day: LabelDayFilterSchema.optional(),
+    total_count: z.number(),
+    filtered_count: z.number(),
+    bulk_download_label: z.string().optional(),
+    areas: z.array(LabelAreaGroupSchema),
+  })
+  .transform((r) => ({
+    date: r.date,
+    date_label: r.date_label ?? r.dateLabel ?? null,
+    day: r.day ?? 'today',
+    total_count: r.total_count,
+    filtered_count: r.filtered_count,
+    bulk_download_label: r.bulk_download_label,
+    areas: r.areas,
+  }));
 export type LabelsResponse = z.infer<typeof LabelsResponseSchema>;
 
 export type MealTypeFilter = 'all' | 'executive' | 'salad';
+
+export function parseLabelDayParam(value: string | null | undefined): LabelDayFilter {
+  return value === 'tomorrow' ? 'tomorrow' : 'today';
+}

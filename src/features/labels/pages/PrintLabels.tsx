@@ -1,14 +1,21 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLabels, useDownloadLabels } from '../api/labels.queries';
 import type { DownloadLabelsParams } from '../api/labels.api';
-import type { Label, MealTypeFilter } from '../model/labels.schema';
+import type { Label, LabelDayFilter, MealTypeFilter } from '../model/labels.schema';
+import { parseLabelDayParam } from '../model/labels.schema';
+import { useSessionStore } from '@/store/useSessionStore';
 import { ApiError } from '@/shared/types/api';
 
-const FILTERS: { id: MealTypeFilter; chipLabel: string }[] = [
+const MEAL_FILTERS: { id: MealTypeFilter; chipLabel: string }[] = [
   { id: 'all', chipLabel: 'All' },
   { id: 'executive', chipLabel: '🍛 Exec' },
   { id: 'salad', chipLabel: '🥗 Salad' },
+];
+
+const DAY_FILTERS: { id: LabelDayFilter; label: string }[] = [
+  { id: 'today', label: 'Today' },
+  { id: 'tomorrow', label: 'Tomorrow' },
 ];
 
 function formatLocation(label: Label) {
@@ -17,29 +24,62 @@ function formatLocation(label: Label) {
 
 export default function PrintLabels() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const role = useSessionStore((s) => s.user?.role ?? 'admin');
+
+  const day = parseLabelDayParam(searchParams.get('day'));
   const [filter, setFilter] = useState<MealTypeFilter>('all');
   const [previewLabel, setPreviewLabel] = useState<Label | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const { data, isLoading, error } = useLabels({ mealType: filter === 'all' ? undefined : filter });
+  const listParams = useMemo(
+    () => ({
+      mealType: filter === 'all' ? undefined : filter,
+      day,
+      role,
+    }),
+    [filter, day, role],
+  );
+
+  const { data, isLoading, error } = useLabels(listParams);
   const downloadLabels = useDownloadLabels();
+
+  const downloadBase: DownloadLabelsParams = useMemo(
+    () => ({ day, role }),
+    [day, role],
+  );
 
   const allLabels = data?.areas.flatMap((a) => a.labels) ?? [];
 
-  const handleDownload = (params: DownloadLabelsParams) => {
-    setErrorMsg(null);
-    downloadLabels.mutate(params, {
-      onError: (err) => setErrorMsg(err instanceof ApiError ? err.message : 'Download failed.'),
-    });
+  const setDay = (next: LabelDayFilter) => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === 'today') params.delete('day');
+        else params.set('day', next);
+        return params;
+      },
+      { replace: true },
+    );
   };
 
-  const dateLabel = data
+  const handleDownload = (params: DownloadLabelsParams = {}) => {
+    setErrorMsg(null);
+    downloadLabels.mutate(
+      { ...downloadBase, ...params },
+      {
+        onError: (err) => setErrorMsg(err instanceof ApiError ? err.message : 'Download failed.'),
+      },
+    );
+  };
+
+  const subtitle = data?.date_label ?? (data?.date
     ? new Date(data.date).toLocaleDateString('en-US', {
         weekday: 'short',
         month: 'short',
         day: 'numeric',
       })
-    : '';
+    : '');
 
   return (
     <div
@@ -64,9 +104,30 @@ export default function PrintLabels() {
             {data && <span style={{ color: '#9CA3AF', fontSize: '18px' }}>{data.total_count} orders</span>}
           </div>
           <p style={{ color: '#9CA3AF', fontSize: '14px', margin: 0, marginTop: '4px' }}>
-            {dateLabel} · Print and attach to each meal package
+            {subtitle} · Print and attach to each meal package
           </p>
         </div>
+      </div>
+
+      {/* Day filter */}
+      <div style={{ display: 'flex', gap: '8px' }}>
+        {DAY_FILTERS.map((d) => (
+          <button
+            key={d.id}
+            onClick={() => setDay(d.id)}
+            style={{
+              backgroundColor: day === d.id ? 'rgba(228,40,29,.10)' : '#1A1A1A',
+              color: day === d.id ? 'var(--danger)' : '#9CA3AF',
+              padding: '8px 20px',
+              borderRadius: '24px',
+              border: `1px solid ${day === d.id ? 'var(--danger)' : '#333'}`,
+              fontSize: '14px',
+              fontWeight: day === d.id ? 600 : 400,
+            }}
+          >
+            {d.label}
+          </button>
+        ))}
       </div>
 
       {errorMsg && (
@@ -115,17 +176,20 @@ export default function PrintLabels() {
             </div>
             <button
               className="btn-primary"
-              style={{ padding: '12px 24px', opacity: downloadLabels.isPending ? 0.7 : 1 }}
-              disabled={downloadLabels.isPending}
+              style={{
+                padding: '12px 24px',
+                opacity: data.filtered_count === 0 || downloadLabels.isPending ? 0.5 : 1,
+              }}
+              disabled={data.filtered_count === 0 || downloadLabels.isPending}
               onClick={() => handleDownload({ mealType: filter === 'all' ? undefined : filter })}
             >
               {data.bulk_download_label ?? 'Download PDF'}
             </button>
           </div>
 
-          {/* Filter Chips */}
+          {/* Meal type filter chips */}
           <div style={{ display: 'flex', gap: '8px' }}>
-            {FILTERS.map((f) => (
+            {MEAL_FILTERS.map((f) => (
               <button
                 key={f.id}
                 onClick={() => setFilter(f.id)}
@@ -155,7 +219,9 @@ export default function PrintLabels() {
                   borderRadius: '12px',
                 }}
               >
-                No labels for this filter.
+                {day === 'tomorrow'
+                  ? 'No labels for tomorrow yet — orders may appear after the menu is locked.'
+                  : 'No labels for this filter.'}
               </div>
             ) : (
               allLabels.map((label) => (
@@ -233,7 +299,7 @@ export default function PrintLabels() {
           </div>
 
           {/* Download by Area */}
-          {data.areas.length > 0 && (
+          {data.areas.length > 0 && allLabels.length > 0 && (
             <div style={{ marginTop: '16px' }}>
               <h3
                 style={{ fontSize: '14px', color: '#9CA3AF', letterSpacing: '1px', marginBottom: '16px' }}
@@ -243,7 +309,7 @@ export default function PrintLabels() {
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                 {data.areas.map((area) => (
                   <button
-                    key={area.area_id}
+                    key={area.area_id ?? area.area_name}
                     className="btn-ghost"
                     style={{
                       border: '1px solid #333',
@@ -251,7 +317,7 @@ export default function PrintLabels() {
                       backgroundColor: '#1A1A1A',
                       color: '#FFF',
                     }}
-                    disabled={downloadLabels.isPending}
+                    disabled={downloadLabels.isPending || area.count === 0}
                     onClick={() =>
                       handleDownload({
                         areaId: area.area_id,
@@ -351,7 +417,6 @@ function LabelPreviewModal({ label, onClose, onDownload, isDownloading }: LabelP
             overflow: 'hidden',
           }}
         >
-          {/* Sticker Header */}
           <div
             style={{
               backgroundColor: '#1A1A1A',
@@ -368,7 +433,6 @@ function LabelPreviewModal({ label, onClose, onDownload, isDownloading }: LabelP
             </div>
           </div>
 
-          {/* Sticker Body */}
           <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
             <h1 style={{ fontSize: '24px', fontWeight: 800, margin: 0, marginBottom: '8px' }}>
               {label.customer_name}

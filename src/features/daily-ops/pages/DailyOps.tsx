@@ -257,7 +257,7 @@ export default function DailyOps() {
                 className="btn-ghost"
                 style={{ padding: '8px 16px', border: '1px solid #333', opacity: exportDailyOps.isPending ? 0.7 : 1 }}
                 disabled={exportDailyOps.isPending}
-                onClick={() => exportDailyOps.mutate()}
+                onClick={() => exportDailyOps.mutate({ role })}
               >
                 {exportDailyOps.isPending ? 'Exporting…' : '📄 Export'}
               </button>
