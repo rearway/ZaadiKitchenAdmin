@@ -81,7 +81,14 @@ export default function AddDish() {
       });
 
       if (photoFile) {
-        await uploadPhoto.mutateAsync({ mealId: meal.id, file: photoFile });
+        try {
+          await uploadPhoto.mutateAsync({ mealId: meal.id, file: photoFile });
+        } catch {
+          setError(
+            'Meal saved as draft, but the photo could not be uploaded. Open it in the Menu Library to retry the photo.',
+          );
+          return;
+        }
       }
 
       navigate('/menu');

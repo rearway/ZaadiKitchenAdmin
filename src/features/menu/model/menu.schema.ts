@@ -50,6 +50,7 @@ export const MealSchema = z
     key_ingredients: z.union([z.string(), z.array(z.string())]).nullable().optional(),
     emoji: z.string().nullable().optional(),
     photo_url: z.string().nullable().optional(),
+    photoUrl: z.string().nullable().optional(),
     already_used: z.boolean().nullable().optional(),
     used_on_day: z.string().nullable().optional(),
   })
@@ -66,7 +67,7 @@ export const MealSchema = z
       ? m.key_ingredients.join(', ')
       : (m.key_ingredients ?? null),
     emoji: m.emoji ?? null,
-    photo_url: m.photo_url ?? null,
+    photo_url: m.photo_url ?? m.photoUrl ?? null,
     already_used: m.already_used ?? false,
     used_on_day: m.used_on_day ?? null,
   }));
@@ -192,11 +193,23 @@ export function toKeyIngredientsArray(text: string): string[] | undefined {
   return items.length ? items : undefined;
 }
 
-export const PhotoUploadUrlResponseSchema = z.object({
-  upload_url: z.string(),
-  photo_url: z.string(),
-  expires_in_seconds: z.number(),
-});
+export const PhotoUploadUrlResponseSchema = z
+  .object({
+    upload_url: z.string().optional(),
+    uploadUrl: z.string().optional(),
+    photo_url: z.string().optional(),
+    photoUrl: z.string().optional(),
+    expires_in_seconds: z.number().optional(),
+    expiresInSeconds: z.number().optional(),
+  })
+  .transform((r) => ({
+    upload_url: r.upload_url ?? r.uploadUrl ?? '',
+    photo_url: r.photo_url ?? r.photoUrl ?? '',
+    expires_in_seconds: r.expires_in_seconds ?? r.expiresInSeconds ?? 0,
+  }))
+  .refine((r) => r.upload_url.length > 0 && r.photo_url.length > 0, {
+    message: 'upload_url and photo_url must be non-empty',
+  });
 export type PhotoUploadUrlResponse = z.infer<typeof PhotoUploadUrlResponseSchema>;
 
 export const ImportRowErrorSchema = z.object({
