@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCreateMeal, useImportMeals } from '@/features/menu/api/menu.queries';
+import { useCreateMeal, useImportMeals, usePhotoUpload } from '@/features/menu/api/menu.queries';
 import { toKeyIngredientsArray } from '@/features/menu/model/menu.schema';
 import type { MealType, ImportResult } from '@/features/menu/model/menu.schema';
 import { ApiError } from '@/shared/types/api';
@@ -11,7 +11,7 @@ const ACCEPTED_PHOTO_TYPES = 'image/jpeg,image/png,image/webp';
 export default function AddDish() {
   const navigate = useNavigate();
   const createMeal = useCreateMeal();
-
+  const uploadPhoto = usePhotoUpload();
   const importMeals = useImportMeals();
 
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -63,7 +63,7 @@ export default function AddDish() {
     const hasMacros = proteinG || carbsG || fatG;
 
     try {
-      await createMeal.mutateAsync({
+      const meal = await createMeal.mutateAsync({
         name_en: nameEn.trim(),
         name_ar: nameAr.trim() || undefined,
         meal_type: mealType,
@@ -78,8 +78,11 @@ export default function AddDish() {
         chef_note: chefNote.trim() || undefined,
         key_ingredients: toKeyIngredientsArray(keyIngredients),
         emoji: selectedEmoji ?? undefined,
-        image: photoFile ?? undefined,
       });
+
+      if (photoFile) {
+        await uploadPhoto.mutateAsync({ mealId: meal.id, file: photoFile });
+      }
 
       navigate('/menu');
     } catch (err) {
@@ -509,11 +512,15 @@ export default function AddDish() {
         <div style={{ marginTop: '16px', borderTop: '1px solid #333', paddingTop: '32px' }}>
           <button
             className="btn-primary"
-            style={{ padding: '16px 32px', fontSize: '16px', opacity: createMeal.isPending ? 0.7 : 1 }}
-            disabled={createMeal.isPending}
+            style={{
+              padding: '16px 32px',
+              fontSize: '16px',
+              opacity: createMeal.isPending || uploadPhoto.isPending ? 0.7 : 1,
+            }}
+            disabled={createMeal.isPending || uploadPhoto.isPending}
             onClick={handleSubmit}
           >
-            {createMeal.isPending ? 'Saving…' : 'Add to Library (saves as Draft)'}
+            {createMeal.isPending || uploadPhoto.isPending ? 'Saving…' : 'Add to Library (saves as Draft)'}
           </button>
           <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '12px' }}>
             Saved as Draft. Activate in Meal Library to assign to weeks.

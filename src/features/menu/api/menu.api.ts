@@ -77,29 +77,16 @@ export async function unpublishWeekApi(weekId: string) {
 }
 
 export async function createMealApi(input: CreateMealInput) {
-  const formData = new FormData();
-  formData.append('name_en', input.name_en);
-  if (input.name_ar) formData.append('name_ar', input.name_ar);
-  formData.append('meal_type', input.meal_type);
-  if (input.kcal !== undefined) formData.append('kcal', String(input.kcal));
-  if (input.emoji) formData.append('emoji', input.emoji);
-  if (input.chef_note) formData.append('chef_note', input.chef_note);
-  
-  if (input.key_ingredients) {
-    input.key_ingredients.forEach((ing) => formData.append('key_ingredients[]', ing));
-  }
-  
-  if (input.macros) {
-    if (input.macros.protein_g !== undefined) formData.append('macros[protein_g]', String(input.macros.protein_g));
-    if (input.macros.carbs_g !== undefined) formData.append('macros[carbs_g]', String(input.macros.carbs_g));
-    if (input.macros.fat_g !== undefined) formData.append('macros[fat_g]', String(input.macros.fat_g));
-  }
-
-  if (input.image) {
-    formData.append('image', input.image);
-  }
-
-  const res = await client.post('/admin/meals', formData);
+  const res = await client.post('/admin/meals', {
+    name_en: input.name_en,
+    name_ar: input.name_ar,
+    meal_type: input.meal_type,
+    kcal: input.kcal,
+    macros: input.macros,
+    chef_note: input.chef_note,
+    key_ingredients: input.key_ingredients,
+    emoji: input.emoji,
+  });
   return unwrap(res.data, MealSchema);
 }
 
