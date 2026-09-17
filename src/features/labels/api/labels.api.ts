@@ -30,7 +30,9 @@ function dailyOpsBasePath(role: Role = 'admin') {
   return role === 'admin' ? '/admin/daily-ops' : '/ops/daily-ops';
 }
 
-function buildDateParams(query: LabelsDateQuery | Pick<GetLabelsParams, 'day' | 'deliveryDate'>) {
+function buildDateParams(
+  query: LabelsDateQuery | Pick<GetLabelsParams, 'day' | 'deliveryDate'>,
+): Record<string, string> {
   if (query.deliveryDate) return { delivery_date: query.deliveryDate };
   if (query.day) return { day: query.day };
   return {};
