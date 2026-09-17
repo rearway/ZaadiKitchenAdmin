@@ -29,4 +29,8 @@ export const queryKeys = {
     summary: ['revenue', 'summary'] as const,
     daily: (month: string) => ['revenue', 'daily', month] as const,
   },
+  comms: {
+    automations: ['comms', 'automations'] as const,
+    broadcastSegments: ['comms', 'broadcastSegments'] as const,
+  },
 } as const;
