@@ -25,4 +25,8 @@ export const queryKeys = {
   labels: {
     list: (params: GetLabelsParams) => ['labels', 'list', params] as const,
   },
+  revenue: {
+    summary: ['revenue', 'summary'] as const,
+    daily: (month: string) => ['revenue', 'daily', month] as const,
+  },
 } as const;

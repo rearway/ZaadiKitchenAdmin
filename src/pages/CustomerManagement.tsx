@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useSessionStore } from '@/store/useSessionStore';
 import {
   useCustomers,
@@ -23,8 +24,13 @@ const STATUS_FILTERS = [
 ] as const;
 
 export default function CustomerManagement() {
+  const [searchParams] = useSearchParams();
   const role = useSessionStore((s) => s.user?.role);
   const isAdmin = role === 'admin';
+
+  const urlStatus = searchParams.get('status') ?? undefined;
+  const urlFilter = searchParams.get('filter') ?? undefined;
+  const urlPlan = searchParams.get('plan') ?? undefined;
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [historyId, setHistoryId] = useState<string | null>(null);
@@ -47,9 +53,18 @@ export default function CustomerManagement() {
     return () => clearTimeout(id);
   }, [inputValue]);
 
+  useEffect(() => {
+    if (urlStatus && STATUS_FILTERS.some((f) => f.key === urlStatus)) {
+      setStatusFilter(urlStatus);
+      setPage(1);
+    }
+  }, [urlStatus]);
+
   const { data: customerData, isLoading } = useCustomers({
     search: search || undefined,
-    status: statusFilter === 'all' ? undefined : statusFilter,
+    status: urlStatus ?? (statusFilter === 'all' ? undefined : statusFilter),
+    filter: urlFilter,
+    plan: urlPlan,
     page,
   });
 
@@ -145,6 +160,47 @@ export default function CustomerManagement() {
           >
             ×
           </button>
+        </div>
+      )}
+
+      {(urlFilter || urlPlan) && (
+        <div
+          style={{
+            display: 'flex',
+            gap: '8px',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            fontSize: '13px',
+            color: '#9CA3AF',
+          }}
+        >
+          <span>Filtered from Revenue:</span>
+          {urlFilter && (
+            <span
+              style={{
+                backgroundColor: '#222',
+                border: '1px solid #333',
+                borderRadius: '16px',
+                padding: '4px 10px',
+                color: '#E5E7EB',
+              }}
+            >
+              {urlFilter === 'new' ? 'New today' : urlFilter}
+            </span>
+          )}
+          {urlPlan && (
+            <span
+              style={{
+                backgroundColor: '#222',
+                border: '1px solid #333',
+                borderRadius: '16px',
+                padding: '4px 10px',
+                color: '#E5E7EB',
+              }}
+            >
+              Plan: {urlPlan}
+            </span>
+          )}
         </div>
       )}
 

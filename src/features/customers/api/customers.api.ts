@@ -12,6 +12,8 @@ import {
 export type GetCustomersParams = {
   search?: string;
   status?: string;
+  filter?: string;
+  plan?: string;
   page?: number;
 };
 

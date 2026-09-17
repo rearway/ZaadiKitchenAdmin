@@ -1,10 +1,61 @@
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useRevenueSummary, useRevenueDaily } from '@/features/revenue';
+import {
+  currentMonthKsa,
+  formatMrrChangeBadge,
+  formatRevenueSar,
+  formatSkipRateChange,
+  PLAN_BAR_COLORS,
+} from '@/features/revenue/model/revenue.schema';
+import { ApiError } from '@/shared/types/api';
 
 export default function RevenueDashboard() {
   const navigate = useNavigate();
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthKsa);
+
+  const { data: summary, isLoading: summaryLoading, error: summaryError } = useRevenueSummary();
+  const { data: daily, isLoading: dailyLoading, error: dailyError } = useRevenueDaily(selectedMonth);
+
+  const monthOptions = useMemo(() => {
+    if (daily?.available_months.length) return daily.available_months;
+    return [{ value: selectedMonth, label: daily?.month_label ?? selectedMonth }];
+  }, [daily, selectedMonth]);
+
+  const maxDailyRevenue = useMemo(() => {
+    const values = daily?.days.map((d) => d.revenue_sar) ?? [];
+    return Math.max(...values, 1);
+  }, [daily]);
+
+  const planTotal = useMemo(
+    () => summary?.subscribers_by_plan.reduce((sum, p) => sum + p.count, 0) ?? 0,
+    [summary],
+  );
+
+  const error =
+    summaryError instanceof ApiError
+      ? summaryError.message
+      : dailyError instanceof ApiError
+        ? dailyError.message
+        : null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      {error && (
+        <div
+          style={{
+            backgroundColor: 'rgba(220,38,38,0.1)',
+            border: '1px solid rgba(220,38,38,0.3)',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            color: '#F87171',
+            fontSize: '14px',
+          }}
+        >
+          {error}
+        </div>
+      )}
+
       {/* 5a. DARK HEADER — MRR BLOCK */}
       <div
         style={{
@@ -51,41 +102,47 @@ export default function RevenueDashboard() {
               lineHeight: 1,
             }}
           >
-            SAR 54,200
+            {summaryLoading ? '…' : formatRevenueSar(summary?.mrr.amount_sar ?? 0)}
           </h1>
-          <div
-            style={{
-              backgroundColor: 'rgba(0, 200, 150, 0.15)',
-              color: 'var(--danger)',
-              padding: '4px 12px',
-              borderRadius: '16px',
-              fontSize: '14px',
-              fontWeight: 600,
-              marginBottom: '6px',
-            }}
-          >
-            ↑ +12.4% vs last month
-          </div>
+          {!summaryLoading && summary && (
+            <div
+              style={{
+                backgroundColor: 'rgba(0, 200, 150, 0.15)',
+                color: 'var(--danger)',
+                padding: '4px 12px',
+                borderRadius: '16px',
+                fontSize: '14px',
+                fontWeight: 600,
+                marginBottom: '6px',
+              }}
+            >
+              {formatMrrChangeBadge(
+                summary.mrr.change_pct,
+                summary.mrr.change_direction,
+                summary.mrr.comparison_label,
+              )}
+            </div>
+          )}
         </div>
 
         {/* 3 Stat Tiles */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
           <StatTile
             label="ACTIVE"
-            value="248"
-            onClick={() => navigate('/customers?filter=active')}
+            value={summaryLoading ? '…' : String(summary?.subscriber_counts.active ?? 0)}
+            onClick={() => navigate('/customers?status=active')}
           />
           <StatTile
             label="NEW TODAY"
-            value="14"
+            value={summaryLoading ? '…' : String(summary?.subscriber_counts.new_today ?? 0)}
             color="var(--danger)"
             onClick={() => navigate('/customers?filter=new')}
           />
           <StatTile
             label="CHURNED"
-            value="3"
+            value={summaryLoading ? '…' : String(summary?.subscriber_counts.churned ?? 0)}
             color="var(--danger)"
-            onClick={() => navigate('/customers?filter=churned')}
+            onClick={() => navigate('/customers?status=churned')}
           />
         </div>
       </div>
@@ -112,6 +169,8 @@ export default function RevenueDashboard() {
               DAILY REVENUE
             </h3>
             <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
               style={{
                 backgroundColor: '#222',
                 color: '#FFF',
@@ -121,27 +180,43 @@ export default function RevenueDashboard() {
                 fontSize: '13px',
               }}
             >
-              <option>Apr 2025</option>
+              {monthOptions.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
             </select>
           </div>
 
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'flex-end',
-              gap: '8px',
-              height: '180px',
-              paddingTop: '20px',
-            }}
-          >
-            <BarChartCol day="Mon" height="40%" opacity={0.3} />
-            <BarChartCol day="Tue" height="50%" opacity={0.3} />
-            <BarChartCol day="Wed" height="45%" opacity={0.3} />
-            <BarChartCol day="Thu" height="70%" opacity={1} today />
-            <BarChartCol day="Fri" height="0%" opacity={0.1} />
-            <BarChartCol day="Sat" height="0%" opacity={0.1} />
-            <BarChartCol day="Sun" height="0%" opacity={0.1} />
-          </div>
+          {dailyLoading ? (
+            <div style={{ color: '#9CA3AF', fontSize: '14px', padding: '48px 0', textAlign: 'center' }}>
+              Loading daily revenue…
+            </div>
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-end',
+                gap: '8px',
+                height: '180px',
+                paddingTop: '20px',
+              }}
+            >
+              {(daily?.days ?? []).map((day) => {
+                const heightPct = (day.revenue_sar / maxDailyRevenue) * 100;
+                const opacity = day.is_today ? 1 : day.revenue_sar > 0 ? 0.3 : 0.1;
+                return (
+                  <BarChartCol
+                    key={day.date}
+                    day={day.day_label}
+                    height={`${heightPct}%`}
+                    opacity={opacity}
+                    today={day.is_today}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* 5c. SUBSCRIBERS BY PLAN */}
@@ -165,12 +240,24 @@ export default function RevenueDashboard() {
             SUBSCRIBERS BY PLAN
           </h3>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <HorizontalBar label="Month" count={129} width="52%" color="var(--danger)" />
-            <HorizontalBar label="Weekly" count={70} width="28%" color="var(--red)" />
-            <HorizontalBar label="Quarterly" count={35} width="14%" color="var(--ops)" />
-            <HorizontalBar label="Try It" count={14} width="6%" color="var(--danger)" />
-          </div>
+          {summaryLoading ? (
+            <div style={{ color: '#9CA3AF', fontSize: '14px', padding: '48px 0', textAlign: 'center' }}>
+              Loading plan breakdown…
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {(summary?.subscribers_by_plan ?? []).map((plan, index) => (
+                <HorizontalBar
+                  key={plan.plan_id}
+                  label={plan.plan_label}
+                  planId={plan.plan_id}
+                  count={plan.count}
+                  width={planTotal > 0 ? `${(plan.count / planTotal) * 100}%` : '0%'}
+                  color={PLAN_BAR_COLORS[index % PLAN_BAR_COLORS.length]}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -202,9 +289,17 @@ export default function RevenueDashboard() {
                 color: 'var(--danger)',
               }}
             >
-              1.4
+              {summaryLoading ? '…' : summary?.key_metrics.avg_skip_rate.value ?? 0}
             </span>
-            <span style={{ color: '#9CA3AF', fontSize: '14px' }}>↑ +0.2 vs last week</span>
+            {!summaryLoading && summary && (
+              <span style={{ color: '#9CA3AF', fontSize: '14px' }}>
+                {formatSkipRateChange(
+                  summary.key_metrics.avg_skip_rate.change,
+                  summary.key_metrics.avg_skip_rate.change_direction,
+                  summary.key_metrics.avg_skip_rate.comparison_label,
+                )}
+              </span>
+            )}
           </div>
         </div>
 
@@ -234,9 +329,11 @@ export default function RevenueDashboard() {
                 color: 'var(--danger)',
               }}
             >
-              34%
+              {summaryLoading ? '…' : `${summary?.key_metrics.salad_meal_pct.value ?? 0}%`}
             </span>
-            <span style={{ color: '#9CA3AF', fontSize: '14px' }}>of active subs</span>
+            <span style={{ color: '#9CA3AF', fontSize: '14px' }}>
+              {summary?.key_metrics.salad_meal_pct.label || 'of active subs'}
+            </span>
           </div>
         </div>
       </div>
@@ -335,16 +432,17 @@ function BarChartCol({ day, height, opacity, today }: BarChartColProps) {
 
 type HorizontalBarProps = {
   label: string;
+  planId: string;
   count: number;
   width: string;
   color: string;
 };
 
-function HorizontalBar({ label, count, width, color }: HorizontalBarProps) {
+function HorizontalBar({ label, planId, count, width, color }: HorizontalBarProps) {
   const navigate = useNavigate();
   return (
     <div
-      onClick={() => navigate('/customers?plan=' + label.toLowerCase())}
+      onClick={() => navigate(`/customers?plan=${encodeURIComponent(planId)}`)}
       style={{ cursor: 'pointer' }}
     >
       <div
