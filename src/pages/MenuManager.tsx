@@ -1055,7 +1055,7 @@ function EditMealModal({
   };
 
   const handleUploadPhoto = () => {
-    if (!photoFile) return;
+    if (!photoFile || !meal.id) return;
     setPhotoError('');
     uploadPhoto.mutate(
       { mealId: meal.id, file: photoFile },
@@ -1071,9 +1071,30 @@ function EditMealModal({
     );
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!nameEn.trim()) return;
+    if (!meal.id) {
+      setPhotoError('Meal ID is missing. Close and reopen the editor.');
+      return;
+    }
+
+    setPhotoError('');
     const hasMacros = proteinG || carbsG || fatG;
+
+    let savedPhotoUrl =
+      photoPreview && !photoPreview.startsWith('blob:') ? photoPreview : meal.photo_url ?? undefined;
+
+    if (photoFile) {
+      try {
+        savedPhotoUrl = await uploadPhoto.mutateAsync({ mealId: meal.id, file: photoFile });
+        setPhotoFile(null);
+        setPhotoPreview(savedPhotoUrl);
+      } catch (err) {
+        setPhotoError(err instanceof ApiError ? err.message : 'Photo upload failed.');
+        return;
+      }
+    }
+
     onSave({
       name_en: nameEn.trim(),
       name_ar: nameAr.trim() || undefined,
@@ -1089,6 +1110,7 @@ function EditMealModal({
       chef_note: chefNote.trim() || undefined,
       key_ingredients: toKeyIngredientsArray(keyIngredients),
       emoji: selectedEmoji ?? undefined,
+      ...(savedPhotoUrl ? { photo_url: savedPhotoUrl } : {}),
     });
   };
 
@@ -1356,9 +1378,11 @@ function EditMealModal({
             className="btn-primary"
             style={{ flex: 2, opacity: isSubmitting ? 0.7 : 1 }}
             disabled={!nameEn.trim() || isSubmitting}
-            onClick={handleSave}
+            onClick={() => {
+              void handleSave();
+            }}
           >
-            {isPending ? 'Saving…' : '✓ Save Changes'}
+            {isSubmitting ? 'Saving…' : '✓ Save Changes'}
           </button>
         </div>
       </div>
