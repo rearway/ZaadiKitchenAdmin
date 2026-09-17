@@ -3,7 +3,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLabels, useDownloadLabels } from '../api/labels.queries';
 import type { DownloadLabelsParams } from '../api/labels.api';
 import type { Label, LabelDayFilter, MealTypeFilter } from '../model/labels.schema';
-import { parseLabelDayParam } from '../model/labels.schema';
+import {
+  getDeliveryDateRange,
+  labelsDateQueryFromSearchParams,
+  resolvedDeliveryDateIso,
+  todayKsa,
+  addDaysToIsoDate,
+} from '../model/labels.schema';
 import { useSessionStore } from '@/store/useSessionStore';
 import { ApiError } from '@/shared/types/api';
 
@@ -27,7 +33,17 @@ export default function PrintLabels() {
   const [searchParams, setSearchParams] = useSearchParams();
   const role = useSessionStore((s) => s.user?.role ?? 'admin');
 
-  const day = parseLabelDayParam(searchParams.get('day'));
+  const dayParam = searchParams.get('day');
+  const deliveryDateParam = searchParams.get('delivery_date');
+  const { minDate, maxDate } = getDeliveryDateRange();
+  const today = todayKsa();
+  const tomorrow = addDaysToIsoDate(today, 1);
+  const selectedDate = resolvedDeliveryDateIso(dayParam, deliveryDateParam);
+  const dateQuery = useMemo(
+    () => labelsDateQueryFromSearchParams(dayParam, deliveryDateParam),
+    [dayParam, deliveryDateParam],
+  );
+
   const [filter, setFilter] = useState<MealTypeFilter>('all');
   const [previewLabel, setPreviewLabel] = useState<Label | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -35,28 +51,45 @@ export default function PrintLabels() {
   const listParams = useMemo(
     () => ({
       mealType: filter === 'all' ? undefined : filter,
-      day,
+      ...dateQuery,
       role,
     }),
-    [filter, day, role],
+    [filter, dateQuery, role],
   );
 
   const { data, isLoading, error } = useLabels(listParams);
   const downloadLabels = useDownloadLabels();
 
   const downloadBase: DownloadLabelsParams = useMemo(
-    () => ({ day, role }),
-    [day, role],
+    () => ({ ...dateQuery, role }),
+    [dateQuery, role],
   );
 
   const allLabels = data?.areas.flatMap((a) => a.labels) ?? [];
 
-  const setDay = (next: LabelDayFilter) => {
+  const setDayShortcut = (next: LabelDayFilter) => {
     setSearchParams(
       (prev) => {
         const params = new URLSearchParams(prev);
+        params.delete('delivery_date');
         if (next === 'today') params.delete('day');
         else params.set('day', next);
+        return params;
+      },
+      { replace: true },
+    );
+  };
+
+  const setDeliveryDate = (isoDate: string) => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        params.delete('day');
+        if (isoDate === today) {
+          params.delete('delivery_date');
+        } else {
+          params.set('delivery_date', isoDate);
+        }
         return params;
       },
       { replace: true },
@@ -109,25 +142,61 @@ export default function PrintLabels() {
         </div>
       </div>
 
-      {/* Day filter */}
-      <div style={{ display: 'flex', gap: '8px' }}>
-        {DAY_FILTERS.map((d) => (
-          <button
-            key={d.id}
-            onClick={() => setDay(d.id)}
-            style={{
-              backgroundColor: day === d.id ? 'rgba(228,40,29,.10)' : '#1A1A1A',
-              color: day === d.id ? 'var(--danger)' : '#9CA3AF',
-              padding: '8px 20px',
-              borderRadius: '24px',
-              border: `1px solid ${day === d.id ? 'var(--danger)' : '#333'}`,
-              fontSize: '14px',
-              fontWeight: day === d.id ? 600 : 400,
+      {/* Delivery date: shortcuts + picker */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+        {DAY_FILTERS.map((d) => {
+          const isActive =
+            d.id === 'today' ? selectedDate === today : selectedDate === tomorrow;
+          return (
+            <button
+              key={d.id}
+              type="button"
+              onClick={() => setDayShortcut(d.id)}
+              style={{
+                backgroundColor: isActive ? 'rgba(228,40,29,.10)' : '#1A1A1A',
+                color: isActive ? 'var(--danger)' : '#9CA3AF',
+                padding: '8px 20px',
+                borderRadius: '24px',
+                border: `1px solid ${isActive ? 'var(--danger)' : '#333'}`,
+                fontSize: '14px',
+                fontWeight: isActive ? 600 : 400,
+              }}
+            >
+              {d.label}
+            </button>
+          );
+        })}
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '14px',
+            color: '#9CA3AF',
+          }}
+        >
+          <span style={{ fontWeight: 600, color: '#D1D5DB' }}>Or pick date</span>
+          <input
+            type="date"
+            value={selectedDate}
+            min={minDate}
+            max={maxDate}
+            onChange={(e) => {
+              if (e.target.value) setDeliveryDate(e.target.value);
             }}
-          >
-            {d.label}
-          </button>
-        ))}
+            style={{
+              backgroundColor: '#1A1A1A',
+              color: '#FFF',
+              border: `1px solid ${
+                selectedDate !== today && selectedDate !== tomorrow ? 'var(--danger)' : '#333'
+              }`,
+              borderRadius: '8px',
+              padding: '8px 12px',
+              fontSize: '14px',
+              fontFamily: 'Montserrat, sans-serif',
+            }}
+          />
+        </label>
       </div>
 
       {errorMsg && (
@@ -219,8 +288,8 @@ export default function PrintLabels() {
                   borderRadius: '12px',
                 }}
               >
-                {day === 'tomorrow'
-                  ? 'No labels for tomorrow yet — orders may appear after the menu is locked.'
+                {selectedDate > today
+                  ? 'No labels for this date yet — delivery rows may appear closer to the day.'
                   : 'No labels for this filter.'}
               </div>
             ) : (
