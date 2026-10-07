@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Raw brand asset pack (source .ai/.pdf/hi-res exports) — only public/brand/*.svg is used by the app
+/platio-20260802T122708Z-1-001/
