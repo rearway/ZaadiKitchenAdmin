@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLabels, useDownloadLabels } from '../api/labels.queries';
 import type { DownloadLabelsParams } from '../api/labels.api';
@@ -28,14 +28,6 @@ function formatLocation(label: Label) {
   return [label.building, label.floor, label.desk_area].filter(Boolean).join(' · ');
 }
 
-function formatPickerDate(isoDate: string) {
-  return new Date(`${isoDate}T12:00:00`).toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
 type DatePickerFieldProps = {
   value: string;
   min: string;
@@ -45,40 +37,26 @@ type DatePickerFieldProps = {
 };
 
 function DatePickerField({ value, min, max, isCustom, onChange }: DatePickerFieldProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const openPicker = () => {
-    const el = inputRef.current;
-    if (!el) return;
-    if (typeof el.showPicker === 'function') {
-      el.showPicker();
-    } else {
-      el.focus();
-      el.click();
-    }
-  };
-
   return (
-    <div style={{ position: 'relative', display: 'inline-flex' }}>
-      <button
-        type="button"
-        onClick={openPicker}
-        style={{
-          backgroundColor: isCustom ? 'rgba(228,40,29,.10)' : '#1A1A1A',
-          color: isCustom ? 'var(--danger)' : '#E5E7EB',
-          padding: '8px 20px',
-          borderRadius: '24px',
-          border: `1px solid ${isCustom ? 'var(--danger)' : '#333'}`,
-          fontSize: '14px',
-          fontWeight: isCustom ? 600 : 500,
-          cursor: 'pointer',
-        }}
-      >
-        📅 {isCustom ? formatPickerDate(value) : 'Pick date'}
-      </button>
+    <label
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '8px',
+        backgroundColor: isCustom ? 'rgba(228,40,29,.10)' : '#1A1A1A',
+        color: isCustom ? 'var(--danger)' : '#E5E7EB',
+        padding: '8px 16px',
+        borderRadius: '24px',
+        border: `1px solid ${isCustom ? 'var(--danger)' : '#333'}`,
+        fontSize: '14px',
+        fontWeight: isCustom ? 600 : 500,
+        cursor: 'pointer',
+      }}
+    >
+      <span aria-hidden="true">📅</span>
       <input
-        ref={inputRef}
         type="date"
+        className="labels-date-input"
         value={value}
         min={min}
         max={max}
@@ -86,16 +64,21 @@ function DatePickerField({ value, min, max, isCustom, onChange }: DatePickerFiel
           if (e.target.value) onChange(e.target.value);
         }}
         style={{
-          position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
-          opacity: 0,
+          background: 'transparent',
+          border: 'none',
+          color: 'inherit',
+          fontSize: 'inherit',
+          fontWeight: 'inherit',
+          fontFamily: 'Montserrat, sans-serif',
+          padding: 0,
+          margin: 0,
+          outline: 'none',
           cursor: 'pointer',
+          minWidth: '140px',
         }}
         aria-label="Pick delivery date"
       />
-    </div>
+    </label>
   );
 }
 
