@@ -51,8 +51,6 @@ export const MealSchema = z
     emoji: z.string().nullable().optional(),
     photo_url: z.string().nullable().optional(),
     photoUrl: z.string().nullable().optional(),
-    already_used: z.boolean().nullable().optional(),
-    used_on_day: z.string().nullable().optional(),
   })
   .transform((m) => ({
     id: m.id ?? m.meal_id ?? '',
@@ -68,8 +66,6 @@ export const MealSchema = z
       : (m.key_ingredients ?? null),
     emoji: m.emoji ?? null,
     photo_url: m.photo_url ?? m.photoUrl ?? null,
-    already_used: m.already_used ?? false,
-    used_on_day: m.used_on_day ?? null,
   }));
 export type Meal = z.infer<typeof MealSchema>;
 

@@ -4,7 +4,6 @@ import {
   useWeeks,
   useWeekDetail,
   useMeals,
-  useMealsPicker,
   useAssignSlot,
   useClearSlot,
   usePublishWeek,
@@ -704,7 +703,6 @@ export default function MenuManager() {
       {assignModalSlot && currentWeek && (
         <AssignDishModal
           slot={assignModalSlot}
-          weekId={currentWeek.id}
           isPending={assignSlot.isPending}
           onClose={() => setAssignModalSlot(null)}
           onAssign={(meal: Meal) => {
@@ -848,13 +846,11 @@ function TabButton({
 
 function AssignDishModal({
   slot,
-  weekId,
   isPending,
   onClose,
   onAssign,
 }: {
   slot: Slot;
-  weekId: string;
   isPending: boolean;
   onClose: () => void;
   onAssign: (meal: Meal) => void;
@@ -862,7 +858,7 @@ function AssignDishModal({
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Meal | null>(null);
 
-  const { data: pickerMeals = [], isLoading } = useMealsPicker(weekId);
+  const { data: pickerMeals = [], isLoading } = useMeals();
 
   const filtered = pickerMeals.filter((m) =>
     m.name_en.toLowerCase().includes(search.toLowerCase()) ||
@@ -943,7 +939,6 @@ function AssignDishModal({
           }}
         >
           {filtered.map((meal) => {
-            const isUsed = meal.already_used;
             return (
               <div
                 key={meal.id}
@@ -956,7 +951,6 @@ function AssignDishModal({
                   border: `1px solid ${selected?.id === meal.id ? 'var(--danger)' : '#333'}`,
                   backgroundColor: selected?.id === meal.id ? 'rgba(0, 200, 150, 0.05)' : '#222',
                   cursor: 'pointer',
-                  opacity: isUsed ? 0.5 : 1,
                 }}
               >
                 <MealIcon meal={meal} size={40} />
@@ -977,11 +971,6 @@ function AssignDishModal({
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {isUsed && (
-                    <span style={{ color: '#9CA3AF', fontSize: '11px', fontWeight: 600 }}>
-                      Used
-                    </span>
-                  )}
                   <div
                     style={{
                       width: '20px',

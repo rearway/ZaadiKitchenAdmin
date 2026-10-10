@@ -4,7 +4,6 @@ import {
   getWeeksApi,
   getWeekDetailApi,
   getMealsApi,
-  getMealsPickerApi,
   assignSlotApi,
   clearSlotApi,
   publishWeekApi,
@@ -37,15 +36,6 @@ export function useMeals(status?: string) {
   return useQuery({
     queryKey: [...queryKeys.menu.meals, status],
     queryFn: () => getMealsApi(status),
-  });
-}
-
-/** Returns active meals with already_used flag for the given week (for the meal picker modal). */
-export function useMealsPicker(weekId: string) {
-  return useQuery({
-    queryKey: queryKeys.menu.mealsPicker(weekId),
-    queryFn: () => getMealsPickerApi(weekId),
-    enabled: !!weekId,
   });
 }
 

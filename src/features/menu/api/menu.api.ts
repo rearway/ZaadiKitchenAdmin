@@ -51,14 +51,6 @@ export async function getMealsApi(status?: string) {
   return unwrap(res.data, z.object({ meals: z.array(MealSchema) }).transform((d) => d.meals));
 }
 
-/** Meal picker: returns active meals with already_used flag for the given week. */
-export async function getMealsPickerApi(weekId: string) {
-  const res = await client.get('/admin/meals', {
-    params: { context: 'picker', exclude_week_id: weekId },
-  });
-  return unwrap(res.data, z.object({ meals: z.array(MealSchema) }).transform((d) => d.meals));
-}
-
 export async function assignSlotApi(weekId: string, slotId: string, mealId: string) {
   const res = await client.post(`/admin/menu/weeks/${weekId}/slots/${slotId}/assign`, { meal_id: mealId });
   return unwrap(res.data, z.object({ slot_id: z.string() }).passthrough());
