@@ -76,3 +76,20 @@ input {
 input:focus {
   border-color: var(--danger);
 }
+
+input.labels-date-input {
+  color-scheme: dark;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+}
+
+input.labels-date-input:focus {
+  border-color: transparent;
+}
+
+input.labels-date-input::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+  opacity: 0.85;
+}

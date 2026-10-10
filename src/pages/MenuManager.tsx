@@ -1,4 +1,4 @@
-import { type ReactNode, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   useWeeks,
@@ -22,10 +22,27 @@ type LibraryFilter = 'all' | 'executive' | 'salad';
 const EMOJI_OPTIONS = ['🍛', '🥘', '🍗', '🥗', '🥙', '🍖'];
 const ACCEPTED_PHOTO_TYPES = 'image/jpeg,image/png,image/webp';
 
+function withPhotoCacheBust(url: string, version: number) {
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}v=${version}`;
+}
+
 /** Renders a meal's photo thumbnail, emoji, or a type-based fallback emoji. */
-function MealIcon({ meal, size = 40 }: { meal: Meal; size?: number }) {
+function MealIcon({
+  meal,
+  size = 40,
+  photoCacheVersion,
+}: {
+  meal: Meal;
+  size?: number;
+  photoCacheVersion?: number;
+}) {
   const fallback = meal.meal_type === 'executive' ? '🍛' : '🥗';
   if (meal.photo_url) {
+    const src =
+      photoCacheVersion != null
+        ? withPhotoCacheBust(meal.photo_url, photoCacheVersion)
+        : meal.photo_url;
     return (
       <div
         style={{
@@ -37,7 +54,7 @@ function MealIcon({ meal, size = 40 }: { meal: Meal; size?: number }) {
         }}
       >
         <img
-          src={meal.photo_url}
+          src={src}
           alt={meal.name_en}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
@@ -69,6 +86,8 @@ export default function MenuManager() {
   const [weekIndex, setWeekIndex] = useState(0);
   const [assignModalSlot, setAssignModalSlot] = useState<Slot | null>(null);
   const [editMeal, setEditMeal] = useState<Meal | null>(null);
+  /** Bumps CDN photo URLs in the library after a successful upload (same path, new bytes). */
+  const [mealPhotoCacheVersion, setMealPhotoCacheVersion] = useState<Record<string, number>>({});
   const [libraryFilter, setLibraryFilter] = useState<LibraryFilter>('all');
   const [confirmClearSlotId, setConfirmClearSlotId] = useState<string | null>(null);
   const [confirmStatusMealId, setConfirmStatusMealId] = useState<string | null>(null);
@@ -555,7 +574,11 @@ export default function MenuManager() {
                       opacity: meal.status === 'draft' ? 0.6 : 1,
                     }}
                   >
-                    <MealIcon meal={meal} size={40} />
+                    <MealIcon
+                      meal={meal}
+                      size={40}
+                      photoCacheVersion={mealPhotoCacheVersion[meal.id]}
+                    />
 
                     <div style={{ flex: 1, marginLeft: '16px' }}>
                       <h4 style={{ fontWeight: 600, fontSize: '15px', marginBottom: meal.name_ar ? '2px' : 0 }}>
@@ -706,6 +729,12 @@ export default function MenuManager() {
           meal={editMeal}
           isPending={updateMeal.isPending}
           onClose={() => setEditMeal(null)}
+          onPhotoUploaded={(mealId) => {
+            setMealPhotoCacheVersion((prev) => ({
+              ...prev,
+              [mealId]: Date.now(),
+            }));
+          }}
           onSave={(input) => {
             setErrorMsg(null);
             updateMeal.mutate(
@@ -1010,11 +1039,13 @@ function EditMealModal({
   meal,
   isPending,
   onClose,
+  onPhotoUploaded,
   onSave,
 }: {
   meal: Meal;
   isPending: boolean;
   onClose: () => void;
+  onPhotoUploaded: (mealId: string) => void;
   onSave: (input: {
     name_en?: string;
     name_ar?: string;
@@ -1042,13 +1073,26 @@ function EditMealModal({
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(meal.emoji ?? null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(meal.photo_url ?? null);
+  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState('');
 
   const isSubmitting = isPending || uploadPhoto.isPending;
 
+  useEffect(() => {
+    return () => {
+      if (photoPreview?.startsWith('blob:')) {
+        URL.revokeObjectURL(photoPreview);
+      }
+    };
+  }, [photoPreview]);
+
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (photoPreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(photoPreview);
+    }
+    setUploadedPhotoUrl(null);
     setPhotoFile(file);
     setPhotoPreview(URL.createObjectURL(file));
     setPhotoError('');
@@ -1061,8 +1105,10 @@ function EditMealModal({
       { mealId: meal.id, file: photoFile },
       {
         onSuccess: (url) => {
+          setUploadedPhotoUrl(url);
           setPhotoFile(null);
-          setPhotoPreview(url);
+          onPhotoUploaded(meal.id);
+          // Keep blob preview — CDN photo_url is often unchanged and would show a cached image.
         },
         onError: (err) => {
           setPhotoError(err instanceof ApiError ? err.message : 'Photo upload failed.');
@@ -1082,13 +1128,17 @@ function EditMealModal({
     const hasMacros = proteinG || carbsG || fatG;
 
     let savedPhotoUrl =
-      photoPreview && !photoPreview.startsWith('blob:') ? photoPreview : meal.photo_url ?? undefined;
+      uploadedPhotoUrl ??
+      (photoPreview && !photoPreview.startsWith('blob:') ? photoPreview : undefined) ??
+      meal.photo_url ??
+      undefined;
 
     if (photoFile) {
       try {
         savedPhotoUrl = await uploadPhoto.mutateAsync({ mealId: meal.id, file: photoFile });
+        setUploadedPhotoUrl(savedPhotoUrl);
         setPhotoFile(null);
-        setPhotoPreview(savedPhotoUrl);
+        onPhotoUploaded(meal.id);
       } catch (err) {
         setPhotoError(err instanceof ApiError ? err.message : 'Photo upload failed.');
         return;
@@ -1341,6 +1391,11 @@ function EditMealModal({
                   >
                     {uploadPhoto.isPending ? 'Uploading…' : 'Upload photo'}
                   </button>
+                )}
+                {uploadedPhotoUrl && !photoFile && (
+                  <span style={{ fontSize: '12px', color: '#4ADE80', fontWeight: 600 }}>
+                    Photo uploaded
+                  </span>
                 )}
                 <button
                   className="btn-ghost"
