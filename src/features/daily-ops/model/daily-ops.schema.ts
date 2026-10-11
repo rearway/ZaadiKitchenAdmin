@@ -51,7 +51,7 @@ export const IssueSchema = z.object({
   delivery_address: z.string().nullable().optional(),
   issue_type: z.string().optional(),
   issue_type_label: z.string(),
-  description: z.string(),
+  description: z.string().nullable().optional(),
   submitted_at: z.string().optional(),
   delivery_date: z.string().optional(),
   meal_name: z.string().nullable().optional(),

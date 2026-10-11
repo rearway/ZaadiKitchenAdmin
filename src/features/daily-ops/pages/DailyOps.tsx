@@ -365,18 +365,20 @@ export default function DailyOps() {
                     <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '12px' }}>
                       {issue.delivery_address ?? '—'}
                     </p>
-                    <p
-                      style={{
-                        fontSize: '15px',
-                        fontStyle: 'italic',
-                        marginBottom: '20px',
-                        backgroundColor: '#222',
-                        padding: '12px',
-                        borderRadius: '8px',
-                      }}
-                    >
-                      "{issue.description}"
-                    </p>
+                    {issue.description && (
+                      <p
+                        style={{
+                          fontSize: '15px',
+                          fontStyle: 'italic',
+                          marginBottom: '20px',
+                          backgroundColor: '#222',
+                          padding: '12px',
+                          borderRadius: '8px',
+                        }}
+                      >
+                        "{issue.description}"
+                      </p>
+                    )}
 
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                       <button
