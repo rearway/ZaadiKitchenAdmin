@@ -412,7 +412,7 @@ export default function Comms() {
                       marginTop: '12px',
                     }}
                   >
-                    Delivered as push notification · title on device: &quot;Zaadi Kitchen&quot;
+                    Delivered as push notification · title on device: &quot;Platio Kitchen&quot;
                   </p>
                 </div>
               </>
