@@ -7,6 +7,9 @@ import {
   MealSchema,
   PhotoUploadUrlResponseSchema,
   ImportResultSchema,
+  AssignSlotResponseSchema,
+  type AssignSlotResponse,
+  type AssignableMealsParams,
   type CreateMealInput,
   type UpdateMealInput,
   type WeekDetail,
@@ -51,9 +54,27 @@ export async function getMealsApi(status?: string) {
   return unwrap(res.data, z.object({ meals: z.array(MealSchema) }).transform((d) => d.meals));
 }
 
-export async function assignSlotApi(weekId: string, slotId: string, mealId: string) {
+/** Assign modal list: active meals only (drafts can't be assigned). Type filter is a UI tab, not a rule. */
+export async function getAssignableMealsApi(params: AssignableMealsParams) {
+  const res = await client.get('/admin/meals', {
+    params: {
+      status: 'active',
+      page: 1,
+      per_page: 50,
+      ...(params.q ? { q: params.q } : {}),
+      ...(params.meal_type ? { meal_type: params.meal_type } : {}),
+    },
+  });
+  return unwrap(res.data, z.object({ meals: z.array(MealSchema) }).transform((d) => d.meals));
+}
+
+export async function assignSlotApi(
+  weekId: string,
+  slotId: string,
+  mealId: string,
+): Promise<AssignSlotResponse> {
   const res = await client.post(`/admin/menu/weeks/${weekId}/slots/${slotId}/assign`, { meal_id: mealId });
-  return unwrap(res.data, z.object({ slot_id: z.string() }).passthrough());
+  return unwrap(res.data, AssignSlotResponseSchema);
 }
 
 export async function clearSlotApi(weekId: string, slotId: string) {

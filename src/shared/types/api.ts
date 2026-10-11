@@ -17,16 +17,28 @@ export const UserSchema = z
   }));
 export type User = z.infer<typeof UserSchema>;
 
+const ApiErrorBodySchema = z
+  .object({
+    errorCode: z.string().optional(),
+    details: z.unknown().optional(),
+  })
+  .passthrough();
+
 // erasableSyntaxOnly forbids constructor parameter properties — use explicit declarations
 export class ApiError extends Error {
   readonly statusCode: number;
   readonly body: unknown;
+  readonly errorCode: string | null;
+  readonly details: unknown;
 
   constructor(message: string, statusCode: number, body?: unknown) {
     super(message);
     this.name = 'ApiError';
     this.statusCode = statusCode;
     this.body = body;
+    const parsed = ApiErrorBodySchema.safeParse(body);
+    this.errorCode = parsed.success ? (parsed.data.errorCode ?? null) : null;
+    this.details = parsed.success ? parsed.data.details : undefined;
   }
 }
 
