@@ -1,12 +1,21 @@
 import { useNavigate } from 'react-router-dom';
+import { useDashboardSubtitles, type DashboardTileId } from '@/features/dashboard';
 
-const TILES = [
+type Tile = {
+  id: DashboardTileId;
+  title: string;
+  icon: string;
+  color: string;
+  live?: boolean;
+  path: string;
+};
+
+const TILES: Tile[] = [
   {
     id: 'ops',
     title: 'Daily Ops',
     icon: '🍛',
     color: 'var(--danger)',
-    sub: '2 open issues',
     live: true,
     path: '/ops',
   },
@@ -15,7 +24,6 @@ const TILES = [
     title: 'Revenue',
     icon: '📊',
     color: 'var(--danger)',
-    sub: 'SAR 54,200 MRR',
     path: '/revenue',
   },
   {
@@ -23,7 +31,6 @@ const TILES = [
     title: 'Menu Manager',
     icon: '📅',
     color: 'var(--danger)',
-    sub: 'Week of Apr 7 ready',
     path: '/menu',
   },
   {
@@ -31,7 +38,6 @@ const TILES = [
     title: 'Customers',
     icon: '👥',
     color: 'var(--ops)',
-    sub: '248 active',
     path: '/customers',
   },
   {
@@ -39,7 +45,6 @@ const TILES = [
     title: 'Comms',
     icon: '💬',
     color: 'var(--ops)',
-    sub: '5 automations live',
     path: '/comms',
   },
   {
@@ -47,13 +52,13 @@ const TILES = [
     title: 'Areas',
     icon: '📍',
     color: 'var(--grn)',
-    sub: '3 active zones',
     path: '/areas',
   },
 ];
 
 export default function DashboardHome() {
   const navigate = useNavigate();
+  const subtitles = useDashboardSubtitles();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
@@ -133,7 +138,7 @@ export default function DashboardHome() {
               )}
             </div>
 
-            <p style={{ color: '#D1D5DB', fontSize: '15px', margin: 0 }}>{tile.sub}</p>
+            <p style={{ color: '#D1D5DB', fontSize: '15px', margin: 0 }}>{subtitles[tile.id]}</p>
           </div>
         ))}
       </div>
