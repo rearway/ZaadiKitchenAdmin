@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ApiError } from '@/shared/types/api';
 
 export const MealTypeSchema = z
   .string()
@@ -51,8 +52,6 @@ export const MealSchema = z
     emoji: z.string().nullable().optional(),
     photo_url: z.string().nullable().optional(),
     photoUrl: z.string().nullable().optional(),
-    already_used: z.boolean().nullable().optional(),
-    used_on_day: z.string().nullable().optional(),
   })
   .transform((m) => ({
     id: m.id ?? m.meal_id ?? '',
@@ -68,8 +67,6 @@ export const MealSchema = z
       : (m.key_ingredients ?? null),
     emoji: m.emoji ?? null,
     photo_url: m.photo_url ?? m.photoUrl ?? null,
-    already_used: m.already_used ?? false,
-    used_on_day: m.used_on_day ?? null,
   }));
 export type Meal = z.infer<typeof MealSchema>;
 
@@ -105,13 +102,17 @@ const WeekDaySchema = z.object({
   slots: z.array(RawApiSlotSchema),
 });
 
+export type WeekStatus = 'draft' | 'published' | 'past';
+
+const WeekStatusSchema = z
+  .enum(['draft', 'published', 'past', 'DRAFT', 'PUBLISHED', 'PAST'])
+  .optional()
+  .transform((s) => s?.toLowerCase() as WeekStatus | undefined);
+
 export const WeekDetailApiSchema = z.object({
   week_id: z.string(),
   week_number: z.number().optional(),
-  status: z
-    .enum(['draft', 'published', 'DRAFT', 'PUBLISHED'])
-    .optional()
-    .transform((s) => s?.toLowerCase() as 'draft' | 'published' | undefined),
+  status: WeekStatusSchema,
   is_editable: z.boolean().optional(),
   days: z.array(WeekDaySchema),
   publish_ready: z.boolean().optional(),
@@ -120,7 +121,7 @@ export const WeekDetailApiSchema = z.object({
 
 export type WeekDetail = {
   weekId: string;
-  status: 'draft' | 'published' | undefined;
+  status: WeekStatus | undefined;
   isEditable: boolean;
   publishReady: boolean;
   publishBlockedReason: string | null;
@@ -138,10 +139,7 @@ export const WeekSchema = z
     date_to: z.string().optional(),
     start_date: z.string().optional(),
     end_date: z.string().optional(),
-    status: z
-      .enum(['draft', 'published', 'DRAFT', 'PUBLISHED'])
-      .optional()
-      .transform((s) => s?.toLowerCase() as 'draft' | 'published' | undefined),
+    status: WeekStatusSchema,
     is_current_week: z.boolean().optional(),
     is_editable: z.boolean().optional(),
     fill_status: z
@@ -160,6 +158,74 @@ export const WeekSchema = z
     fill_status: w.fill_status,
   }));
 export type Week = z.infer<typeof WeekSchema>;
+
+/** Only draft weeks accept slot changes; published and past weeks are read-only. */
+export function isWeekEditable(week: WeekDetail | undefined): boolean {
+  if (!week) return false;
+  return week.isEditable && week.status !== 'published' && week.status !== 'past';
+}
+
+export const AssignSlotResponseSchema = z.object({
+  slot_id: z.string(),
+  meal_type: MealTypeSchema.optional(),
+  delivery_date: z.string().optional(),
+  meal: MealSchema,
+  week_fill_status: z.object({
+    filled_slots: z.number(),
+    total_slots: z.number(),
+    publish_ready: z.boolean(),
+  }),
+});
+export type AssignSlotResponse = z.infer<typeof AssignSlotResponseSchema>;
+
+export type AssignableMealsParams = {
+  q?: string;
+  meal_type?: MealType;
+};
+
+const DaySaladConflictDetailsSchema = z.object({
+  delivery_date: z.string().optional(),
+  existing_slot_id: z.string().optional(),
+  existing_meal_name: z.string().optional(),
+});
+
+export const ASSIGN_ERROR = {
+  DAY_SALAD_ALREADY_ASSIGNED: 'DAY_SALAD_ALREADY_ASSIGNED',
+  MEAL_IS_DRAFT: 'MEAL_IS_DRAFT',
+  SLOT_NOT_EDITABLE: 'SLOT_NOT_EDITABLE',
+  RESOURCE_NOT_FOUND: 'RESOURCE_NOT_FOUND',
+} as const;
+
+export type AssignError =
+  | { kind: 'day_salad_conflict'; message: string; existingSlotId: string | null }
+  | { kind: 'meal_is_draft'; message: string }
+  | { kind: 'slot_not_editable'; message: string }
+  | { kind: 'not_found'; message: string }
+  | { kind: 'unknown'; message: string };
+
+/** Maps an assign-slot failure to the UI handling the backend contract prescribes. */
+export function classifyAssignError(err: unknown): AssignError {
+  const errorCode = err instanceof ApiError ? err.errorCode : null;
+  const message = err instanceof Error ? err.message : '';
+  switch (errorCode) {
+    case ASSIGN_ERROR.DAY_SALAD_ALREADY_ASSIGNED: {
+      const parsed = DaySaladConflictDetailsSchema.safeParse(err instanceof ApiError ? err.details : undefined);
+      return {
+        kind: 'day_salad_conflict',
+        message,
+        existingSlotId: parsed.success ? (parsed.data.existing_slot_id ?? null) : null,
+      };
+    }
+    case ASSIGN_ERROR.MEAL_IS_DRAFT:
+      return { kind: 'meal_is_draft', message: 'Activate this meal before assigning it.' };
+    case ASSIGN_ERROR.SLOT_NOT_EDITABLE:
+      return { kind: 'slot_not_editable', message: message || 'This week is published or past and can no longer be edited.' };
+    case ASSIGN_ERROR.RESOURCE_NOT_FOUND:
+      return { kind: 'not_found', message: message || 'This week, slot or meal no longer exists. The week has been refreshed.' };
+    default:
+      return { kind: 'unknown', message: message || 'Failed to assign meal' };
+  }
+}
 
 export const CreateMealInputSchema = z.object({
   name_en: z.string().min(1, 'Meal name is required').max(80),

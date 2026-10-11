@@ -4,7 +4,7 @@ import {
   useWeeks,
   useWeekDetail,
   useMeals,
-  useMealsPicker,
+  useAssignableMeals,
   useAssignSlot,
   useClearSlot,
   usePublishWeek,
@@ -14,7 +14,13 @@ import {
   usePhotoUpload,
 } from '@/features/menu/api/menu.queries';
 import type { Meal, MealType, Slot, Week } from '@/features/menu/model/menu.schema';
-import { DAY_LABEL, toKeyIngredientsArray } from '@/features/menu/model/menu.schema';
+import {
+  DAY_LABEL,
+  classifyAssignError,
+  isWeekEditable,
+  toKeyIngredientsArray,
+} from '@/features/menu/model/menu.schema';
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { ApiError } from '@/shared/types/api';
 
 type LibraryFilter = 'all' | 'executive' | 'salad';
@@ -95,6 +101,8 @@ export default function MenuManager() {
   // Shown when deactivating a meal that's in a published week (409 response)
   const [publishedMealConfirm, setPublishedMealConfirm] = useState<Meal | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [assignErrorMsg, setAssignErrorMsg] = useState<string | null>(null);
+  const [conflictSlotId, setConflictSlotId] = useState<string | null>(null);
 
   const { data: weeks = [], isLoading: weeksLoading } = useWeeks();
   const { data: meals = [], isLoading: mealsLoading } = useMeals();
@@ -114,6 +122,46 @@ export default function MenuManager() {
 
   const slots = weekDetail?.slots ?? [];
   const canPublish = weekDetail?.publishReady ?? false;
+  const canEditWeek = isWeekEditable(weekDetail);
+
+  const openAssignModal = (slot: Slot) => {
+    setConfirmClearSlotId(null);
+    setAssignErrorMsg(null);
+    setConflictSlotId(null);
+    setAssignModalSlot(slot);
+  };
+
+  const closeAssignModal = () => {
+    setAssignModalSlot(null);
+    setAssignErrorMsg(null);
+    setConflictSlotId(null);
+  };
+
+  const handleAssign = (slotId: string, meal: Meal) => {
+    setErrorMsg(null);
+    setAssignErrorMsg(null);
+    setConflictSlotId(null);
+    assignSlot.mutate(
+      { slotId, meal },
+      {
+        onSuccess: closeAssignModal,
+        onError: (err) => {
+          const assignError = classifyAssignError(err);
+          if (assignError.kind === 'day_salad_conflict') {
+            setAssignErrorMsg(assignError.message);
+            setConflictSlotId(assignError.existingSlotId);
+            return;
+          }
+          if (assignError.kind === 'meal_is_draft') {
+            setAssignErrorMsg(assignError.message);
+            return;
+          }
+          closeAssignModal();
+          setErrorMsg(assignError.message);
+        },
+      },
+    );
+  };
 
   const formatWeekRange = (week: Week) => {
     if (week.date_range) return week.date_range;
@@ -263,6 +311,9 @@ export default function MenuManager() {
                 const dayLabel = DAY_LABEL[slot.day] ?? slot.day.toUpperCase();
                 const isFirst = slot.day === slots[0]?.day;
                 const isClearPending = clearSlot.isPending && clearSlot.variables === slot.id;
+                const canEditSlot = canEditWeek && slot.is_editable;
+                const slotBorder = conflictSlotId === slot.id ? '1px solid var(--danger)' : '1px solid #333';
+                const isDishTypeDifferent = !!slot.meal?.meal_type && slot.meal.meal_type !== slot.meal_type;
                 return (
                   <div key={slot.id}>
                     <div
@@ -273,8 +324,8 @@ export default function MenuManager() {
                         backgroundColor: '#1A1A1A',
                         padding: '16px 24px',
                         borderRadius: confirmClearSlotId === slot.id ? '12px 12px 0 0' : '12px',
-                        border: '1px solid #333',
-                        borderBottom: confirmClearSlotId === slot.id ? 'none' : '1px solid #333',
+                        border: slotBorder,
+                        borderBottom: confirmClearSlotId === slot.id ? 'none' : slotBorder,
                       }}
                     >
                       <div
@@ -299,8 +350,22 @@ export default function MenuManager() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                               <MealIcon meal={slot.meal} size={44} />
                               <div>
-                                <h4 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '2px' }}>
+                                <h4 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   {slot.meal.name_en}
+                                  {isDishTypeDifferent && (
+                                    <span
+                                      style={{
+                                        padding: '2px 8px',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                        backgroundColor: 'rgba(228,40,29,.10)',
+                                        color: 'var(--danger)',
+                                      }}
+                                    >
+                                      {slot.meal.meal_type === 'executive' ? 'Executive' : 'Salad'}
+                                    </span>
+                                  )}
                                 </h4>
                                 {slot.meal.name_ar && (
                                   <p style={{ fontSize: '13px', color: '#9CA3AF', margin: '0 0 2px', direction: 'rtl', textAlign: 'left' }}>
@@ -316,21 +381,19 @@ export default function MenuManager() {
                             <div style={{ display: 'flex', gap: '8px' }}>
                               <button
                                 className="btn-ghost"
-                                style={{ padding: '8px' }}
-                                onClick={() => {
-                                  setConfirmClearSlotId(null);
-                                  setAssignModalSlot(slot);
-                                }}
+                                style={{ padding: '8px', opacity: canEditSlot ? 1 : 0.5 }}
+                                disabled={!canEditSlot}
+                                onClick={() => openAssignModal(slot)}
                               >
                                 ✏️ Edit
                               </button>
                               <button
                                 className="btn-ghost"
-                                style={{ padding: '8px', color: '#9CA3AF' }}
+                                style={{ padding: '8px', color: '#9CA3AF', opacity: canEditSlot ? 1 : 0.5 }}
                                 onClick={() => setConfirmClearSlotId(
                                   confirmClearSlotId === slot.id ? null : slot.id
                                 )}
-                                disabled={isClearPending}
+                                disabled={!canEditSlot || isClearPending}
                               >
                                 {isClearPending ? '…' : '✕'}
                               </button>
@@ -338,20 +401,21 @@ export default function MenuManager() {
                           </div>
                         ) : (
                           <div
-                            onClick={() => setAssignModalSlot(slot)}
+                            onClick={canEditSlot ? () => openAssignModal(slot) : undefined}
                             style={{
                               border: '1px dashed #444',
                               borderRadius: '8px',
                               padding: '16px',
                               textAlign: 'center',
                               color: '#9CA3AF',
-                              cursor: 'pointer',
+                              cursor: canEditSlot ? 'pointer' : 'not-allowed',
+                              opacity: canEditSlot ? 1 : 0.5,
                               transition: 'border-color 0.2s',
                             }}
-                            onMouseOver={(e) => (e.currentTarget.style.borderColor = 'var(--danger)')}
-                            onMouseOut={(e) => (e.currentTarget.style.borderColor = '#444')}
+                            onMouseOver={canEditSlot ? (e) => (e.currentTarget.style.borderColor = 'var(--danger)') : undefined}
+                            onMouseOut={canEditSlot ? (e) => (e.currentTarget.style.borderColor = '#444') : undefined}
                           >
-                            + Add meal
+                            {canEditSlot ? '+ Add meal' : 'No meal assigned'}
                           </div>
                         )}
                       </div>
@@ -507,8 +571,12 @@ export default function MenuManager() {
             ) : (
               <button
                 className="btn-primary"
-                style={{ padding: '12px 32px', fontSize: '16px', opacity: publishWeek.isPending ? 0.7 : 1 }}
-                disabled={publishWeek.isPending}
+                style={{
+                  padding: '12px 32px',
+                  fontSize: '16px',
+                  opacity: publishWeek.isPending || !canPublish || weekDetail?.status === 'past' ? 0.7 : 1,
+                }}
+                disabled={publishWeek.isPending || !canPublish || weekDetail?.status === 'past'}
                 onClick={() => {
                   if (!currentWeek) return;
                   setErrorMsg(null);
@@ -704,22 +772,11 @@ export default function MenuManager() {
       {assignModalSlot && currentWeek && (
         <AssignDishModal
           slot={assignModalSlot}
-          weekId={currentWeek.id}
           isPending={assignSlot.isPending}
-          onClose={() => setAssignModalSlot(null)}
-          onAssign={(meal: Meal) => {
-            setErrorMsg(null);
-            assignSlot.mutate(
-              { slotId: assignModalSlot.id, mealId: meal.id },
-              {
-                onSuccess: () => setAssignModalSlot(null),
-                onError: (err) => {
-                  setAssignModalSlot(null);
-                  setErrorMsg(err instanceof Error ? err.message : 'Failed to assign meal');
-                },
-              },
-            );
-          }}
+          errorMessage={assignErrorMsg}
+          onSelectionChange={() => setAssignErrorMsg(null)}
+          onClose={closeAssignModal}
+          onAssign={(meal: Meal) => handleAssign(assignModalSlot.id, meal)}
         />
       )}
 
@@ -848,26 +905,33 @@ function TabButton({
 
 function AssignDishModal({
   slot,
-  weekId,
   isPending,
+  errorMessage,
+  onSelectionChange,
   onClose,
   onAssign,
 }: {
   slot: Slot;
-  weekId: string;
   isPending: boolean;
+  errorMessage: string | null;
+  onSelectionChange: () => void;
   onClose: () => void;
   onAssign: (meal: Meal) => void;
 }) {
   const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState<LibraryFilter>('all');
   const [selected, setSelected] = useState<Meal | null>(null);
+  const debouncedSearch = useDebouncedValue(search.trim());
 
-  const { data: pickerMeals = [], isLoading } = useMealsPicker(weekId);
+  const { data: meals = [], isLoading } = useAssignableMeals({
+    q: debouncedSearch || undefined,
+    meal_type: typeFilter === 'all' ? undefined : typeFilter,
+  });
 
-  const filtered = pickerMeals.filter((m) =>
-    m.name_en.toLowerCase().includes(search.toLowerCase()) ||
-    (m.name_ar ?? '').toLowerCase().includes(search.toLowerCase()),
-  );
+  const handleSelect = (meal: Meal) => {
+    setSelected(meal);
+    onSelectionChange();
+  };
 
   const dayLabel = DAY_LABEL[slot.day] ?? slot.day.toUpperCase();
 
@@ -922,8 +986,46 @@ function AssignDishModal({
           placeholder="Search dishes..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: '100%', marginBottom: '24px' }}
+          style={{ width: '100%', marginBottom: '16px' }}
         />
+
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+          {([['all', 'All'], ['executive', '🍛 Exec'], ['salad', '🥗 Salad']] as [LibraryFilter, string][]).map(
+            ([value, label]) => (
+              <button
+                key={value}
+                onClick={() => setTypeFilter(value)}
+                style={{
+                  backgroundColor: typeFilter === value ? '#333' : '#1A1A1A',
+                  color: typeFilter === value ? '#FFF' : '#9CA3AF',
+                  padding: '6px 16px',
+                  borderRadius: '20px',
+                  border: `1px solid ${typeFilter === value ? '#555' : '#333'}`,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                }}
+              >
+                {label}
+              </button>
+            ),
+          )}
+        </div>
+
+        {errorMessage && (
+          <div
+            style={{
+              backgroundColor: 'rgba(220,38,38,0.1)',
+              border: '1px solid rgba(220,38,38,0.3)',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              color: '#F87171',
+              fontSize: '14px',
+              marginBottom: '16px',
+            }}
+          >
+            ⚠ {errorMessage}
+          </div>
+        )}
 
         {isLoading && (
           <div style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF', fontSize: '14px' }}>
@@ -942,12 +1044,16 @@ function AssignDishModal({
             paddingRight: '8px',
           }}
         >
-          {filtered.map((meal) => {
-            const isUsed = meal.already_used;
+          {!isLoading && meals.length === 0 && (
+            <div style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF', fontSize: '14px' }}>
+              No active meals found. Activate a meal in the Meal Library to assign it.
+            </div>
+          )}
+          {meals.map((meal) => {
             return (
               <div
                 key={meal.id}
-                onClick={() => setSelected(meal)}
+                onClick={() => handleSelect(meal)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -956,7 +1062,6 @@ function AssignDishModal({
                   border: `1px solid ${selected?.id === meal.id ? 'var(--danger)' : '#333'}`,
                   backgroundColor: selected?.id === meal.id ? 'rgba(0, 200, 150, 0.05)' : '#222',
                   cursor: 'pointer',
-                  opacity: isUsed ? 0.5 : 1,
                 }}
               >
                 <MealIcon meal={meal} size={40} />
@@ -977,11 +1082,6 @@ function AssignDishModal({
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {isUsed && (
-                    <span style={{ color: '#9CA3AF', fontSize: '11px', fontWeight: 600 }}>
-                      Used
-                    </span>
-                  )}
                   <div
                     style={{
                       width: '20px',

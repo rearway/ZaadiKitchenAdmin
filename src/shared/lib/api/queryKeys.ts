@@ -1,5 +1,6 @@
 import type { GetCustomersParams } from '@/features/customers/api/customers.api';
 import type { GetLabelsParams } from '@/features/labels/api/labels.api';
+import type { AssignableMealsParams } from '@/features/menu/model/menu.schema';
 
 export const queryKeys = {
   areas: {
@@ -10,7 +11,7 @@ export const queryKeys = {
     weeks: ['menu', 'weeks'] as const,
     weekDetail: (weekId: string) => ['menu', 'weeks', weekId] as const,
     meals: ['menu', 'meals'] as const,
-    mealsPicker: (weekId: string) => ['menu', 'meals', 'picker', weekId] as const,
+    assignableMeals: (params: AssignableMealsParams) => ['menu', 'meals', 'assignable', params] as const,
   },
   customers: {
     all: ['customers'] as const,
