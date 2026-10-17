@@ -58,7 +58,7 @@ export async function getMealsApi(params: GetMealsParams = {}) {
     params: {
       status: params.status ?? 'all',
       page: 1,
-      per_page: 100,
+      per_page: 50,
       ...(params.meal_type ? { meal_type: params.meal_type } : {}),
     },
   });
