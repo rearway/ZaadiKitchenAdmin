@@ -11,6 +11,7 @@ export const queryKeys = {
     weeks: ['menu', 'weeks'] as const,
     weekDetail: (weekId: string) => ['menu', 'weeks', weekId] as const,
     meals: ['menu', 'meals'] as const,
+    mealDetail: (mealId: string) => ['menu', 'meals', mealId] as const,
     assignableMeals: (params: AssignableMealsParams) => ['menu', 'meals', 'assignable', params] as const,
   },
   customers: {
