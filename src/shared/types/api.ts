@@ -20,7 +20,10 @@ export type User = z.infer<typeof UserSchema>;
 const ApiErrorBodySchema = z
   .object({
     errorCode: z.string().optional(),
+    error: z.string().optional(),
     details: z.unknown().optional(),
+    affected_weeks: z.array(z.string()).optional(),
+    affects_live_menu: z.boolean().optional(),
   })
   .passthrough();
 
@@ -30,6 +33,7 @@ export class ApiError extends Error {
   readonly body: unknown;
   readonly errorCode: string | null;
   readonly details: unknown;
+  readonly affectedWeeks: string[];
 
   constructor(message: string, statusCode: number, body?: unknown) {
     super(message);
@@ -37,8 +41,10 @@ export class ApiError extends Error {
     this.statusCode = statusCode;
     this.body = body;
     const parsed = ApiErrorBodySchema.safeParse(body);
-    this.errorCode = parsed.success ? (parsed.data.errorCode ?? null) : null;
-    this.details = parsed.success ? parsed.data.details : undefined;
+    const data = parsed.success ? parsed.data : null;
+    this.errorCode = data ? (data.errorCode ?? data.error ?? null) : null;
+    this.details = data?.details;
+    this.affectedWeeks = data?.affected_weeks ?? [];
   }
 }
 

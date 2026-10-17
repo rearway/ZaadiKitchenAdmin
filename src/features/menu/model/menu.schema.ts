@@ -14,9 +14,11 @@ export const MealTypeSchema = z
 export type MealType = 'executive' | 'salad';
 
 export const MealStatusSchema = z
-  .enum(['active', 'draft', 'ACTIVE', 'DRAFT'])
-  .transform((s) => s.toLowerCase() as 'active' | 'draft');
-export type MealStatus = 'active' | 'draft';
+  .enum(['active', 'draft', 'updated', 'ACTIVE', 'DRAFT', 'UPDATED'])
+  .transform((s) => s.toLowerCase() as MealStatus);
+export type MealStatus = 'active' | 'draft' | 'updated';
+
+export type MealLibraryStatusFilter = 'all' | MealStatus;
 
 export const MacrosSchema = z
   .object({
@@ -52,6 +54,8 @@ export const MealSchema = z
     emoji: z.string().nullable().optional(),
     photo_url: z.string().nullable().optional(),
     photoUrl: z.string().nullable().optional(),
+    has_pending_changes: z.boolean().optional(),
+    hasPendingChanges: z.boolean().optional(),
   })
   .transform((m) => ({
     id: m.id ?? m.meal_id ?? '',
@@ -67,8 +71,110 @@ export const MealSchema = z
       : (m.key_ingredients ?? null),
     emoji: m.emoji ?? null,
     photo_url: m.photo_url ?? m.photoUrl ?? null,
+    has_pending_changes: m.has_pending_changes ?? m.hasPendingChanges ?? false,
   }));
 export type Meal = z.infer<typeof MealSchema>;
+
+const MealPendingSchema = z
+  .object({
+    name_en: z.string().optional(),
+    name_ar: z.string().nullable().optional(),
+    kcal: z.number().nullable().optional(),
+    macros: MacrosSchema.optional(),
+    chef_note: z.string().nullable().optional(),
+    key_ingredients: z.union([z.string(), z.array(z.string())]).nullable().optional(),
+    emoji: z.string().nullable().optional(),
+    photo_url: z.string().nullable().optional(),
+  })
+  .nullable()
+  .optional()
+  .transform((p) => {
+    if (!p) return null;
+    return {
+      name_en: p.name_en,
+      name_ar: p.name_ar ?? null,
+      kcal: p.kcal ?? null,
+      macros: p.macros,
+      chef_note: p.chef_note ?? null,
+      key_ingredients: Array.isArray(p.key_ingredients)
+        ? p.key_ingredients.join(', ')
+        : (p.key_ingredients ?? null),
+      emoji: p.emoji ?? null,
+      photo_url: p.photo_url ?? null,
+    };
+  });
+
+export type MealDetail = Meal & { pending: MealPending | null };
+export type MealPending = {
+  name_en?: string;
+  name_ar?: string | null;
+  kcal?: number | null;
+  macros?: Macros;
+  chef_note?: string | null;
+  key_ingredients?: string | null;
+  emoji?: string | null;
+  photo_url?: string | null;
+};
+
+export type GetMealsParams = {
+  status?: MealLibraryStatusFilter;
+  meal_type?: MealType;
+};
+
+export function parseMealDetail(payload: unknown): MealDetail {
+  const base = MealSchema.parse(payload);
+  const pendingEnvelope = z.object({ pending: MealPendingSchema }).safeParse(payload);
+  return {
+    ...base,
+    pending: pendingEnvelope.success ? pendingEnvelope.data.pending : null,
+  };
+}
+
+export const MealStatusUpdateResponseSchema = z
+  .object({
+    meal_id: z.string().optional(),
+    previous_status: MealStatusSchema.optional(),
+    status: MealStatusSchema.optional(),
+    updated_at: z.string().optional(),
+    pending_applied: z.boolean().optional(),
+    affects_live_menu: z.boolean().optional(),
+    affected_weeks: z.array(z.string()).optional(),
+  })
+  .passthrough();
+export type MealStatusUpdateResponse = z.infer<typeof MealStatusUpdateResponseSchema>;
+
+export const MEAL_STATUS_ERROR = {
+  MEAL_IN_PUBLISHED_WEEK: 'MEAL_IN_PUBLISHED_WEEK',
+} as const;
+
+/** 409 when activating updated meals or drafting from a published week — retry status PATCH with confirm_published_edit. */
+export function parseMealPublishedWeekConflict(err: unknown): {
+  message: string;
+  affectedWeeks: string[];
+} | null {
+  if (!(err instanceof ApiError) || err.statusCode !== 409) return null;
+  if (err.errorCode !== MEAL_STATUS_ERROR.MEAL_IN_PUBLISHED_WEEK) return null;
+  return {
+    message: err.message,
+    affectedWeeks: err.affectedWeeks,
+  };
+}
+
+/** Form defaults: pending values when present (meal is active/updated with saved edits). */
+export function mealEditableFields(detail: MealDetail) {
+  const p = detail.pending;
+  return {
+    name_en: p?.name_en ?? detail.name_en,
+    name_ar: p?.name_ar ?? detail.name_ar ?? '',
+    meal_type: (detail.meal_type ?? 'executive') as MealType,
+    kcal: p?.kcal ?? detail.kcal,
+    macros: p?.macros ?? detail.macros,
+    chef_note: p?.chef_note ?? detail.chef_note ?? '',
+    key_ingredients: p?.key_ingredients ?? detail.key_ingredients ?? '',
+    emoji: p?.emoji ?? detail.emoji,
+    photo_url: p?.photo_url ?? detail.photo_url,
+  };
+}
 
 // Flat slot shape used throughout the UI
 export const SlotSchema = z.object({

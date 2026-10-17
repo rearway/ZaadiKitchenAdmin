@@ -4,6 +4,7 @@ import {
   getWeeksApi,
   getWeekDetailApi,
   getMealsApi,
+  getMealDetailApi,
   getAssignableMealsApi,
   assignSlotApi,
   clearSlotApi,
@@ -20,6 +21,7 @@ import {
   classifyAssignError,
   type AssignableMealsParams,
   type CreateMealInput,
+  type GetMealsParams,
   type Meal,
   type UpdateMealInput,
   type WeekDetail,
@@ -40,10 +42,18 @@ export function useWeekDetail(weekId: string) {
   });
 }
 
-export function useMeals(status?: string) {
+export function useMeals(params: GetMealsParams = {}) {
   return useQuery({
-    queryKey: [...queryKeys.menu.meals, status],
-    queryFn: () => getMealsApi(status),
+    queryKey: [...queryKeys.menu.meals, params],
+    queryFn: () => getMealsApi(params),
+  });
+}
+
+export function useMealDetail(mealId: string) {
+  return useQuery({
+    queryKey: queryKeys.menu.mealDetail(mealId),
+    queryFn: () => getMealDetailApi(mealId),
+    enabled: !!mealId,
   });
 }
 
@@ -148,7 +158,11 @@ export function useUpdateMeal() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateMealInput }) =>
       updateMealApi(id, input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.menu.meals }),
+    onSuccess: (_, { id }) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: queryKeys.menu.meals }),
+        qc.invalidateQueries({ queryKey: queryKeys.menu.mealDetail(id) }),
+      ]),
   });
 }
 
@@ -164,7 +178,11 @@ export function useUpdateMealStatus() {
       status: 'active' | 'draft';
       confirmPublishedEdit?: boolean;
     }) => updateMealStatusApi(id, status, confirmPublishedEdit),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.menu.meals }),
+    onSuccess: (_, { id }) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: queryKeys.menu.meals }),
+        qc.invalidateQueries({ queryKey: queryKeys.menu.mealDetail(id) }),
+      ]),
   });
 }
 
@@ -184,7 +202,11 @@ export function usePhotoUpload() {
       await updateMealApi(mealId, { photo_url });
       return photo_url;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.menu.meals }),
+    onSuccess: (_, { mealId }) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: queryKeys.menu.meals }),
+        qc.invalidateQueries({ queryKey: queryKeys.menu.mealDetail(mealId) }),
+      ]),
   });
 }
 

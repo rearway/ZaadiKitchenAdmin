@@ -4,6 +4,7 @@ import {
   useWeeks,
   useWeekDetail,
   useMeals,
+  useMealDetail,
   useAssignableMeals,
   useAssignSlot,
   useClearSlot,
@@ -13,17 +14,53 @@ import {
   useUpdateMealStatus,
   usePhotoUpload,
 } from '@/features/menu/api/menu.queries';
-import type { Meal, MealType, Slot, Week } from '@/features/menu/model/menu.schema';
+import type {
+  Meal,
+  MealLibraryStatusFilter,
+  MealStatus,
+  MealType,
+  Slot,
+  Week,
+} from '@/features/menu/model/menu.schema';
 import {
   DAY_LABEL,
   classifyAssignError,
   isWeekEditable,
+  mealEditableFields,
+  parseMealPublishedWeekConflict,
   toKeyIngredientsArray,
 } from '@/features/menu/model/menu.schema';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { ApiError } from '@/shared/types/api';
 
-type LibraryFilter = 'all' | 'executive' | 'salad';
+type MealTypeFilter = 'all' | 'executive' | 'salad';
+
+type LiveMenuConfirm = {
+  meal: Meal;
+  targetStatus: 'active' | 'draft';
+  message: string;
+  affectedWeeks: string[];
+};
+
+function mealStatusLabel(status: MealStatus): string {
+  if (status === 'active') return 'Active';
+  if (status === 'updated') return 'Updated';
+  return 'Draft';
+}
+
+function mealStatusBadgeStyle(status: MealStatus): React.CSSProperties {
+  if (status === 'active') {
+    return { backgroundColor: 'rgba(228,40,29,.10)', color: 'var(--danger)', border: 'none' };
+  }
+  if (status === 'updated') {
+    return {
+      backgroundColor: 'var(--warn-a10)',
+      color: 'var(--danger)',
+      border: '1px solid rgba(245, 230, 66, 0.3)',
+    };
+  }
+  return { backgroundColor: 'transparent', color: '#6B7280', border: '1px solid #444' };
+}
 
 const EMOJI_OPTIONS = ['🍛', '🥘', '🍗', '🥗', '🥙', '🍖'];
 const ACCEPTED_PHOTO_TYPES = 'image/jpeg,image/png,image/webp';
@@ -91,21 +128,24 @@ export default function MenuManager() {
   const [activeTab, setActiveTab] = useState<'planner' | 'library'>('planner');
   const [weekIndex, setWeekIndex] = useState(0);
   const [assignModalSlot, setAssignModalSlot] = useState<Slot | null>(null);
-  const [editMeal, setEditMeal] = useState<Meal | null>(null);
+  const [editMealId, setEditMealId] = useState<string | null>(null);
   /** Bumps CDN photo URLs in the library after a successful upload (same path, new bytes). */
   const [mealPhotoCacheVersion, setMealPhotoCacheVersion] = useState<Record<string, number>>({});
-  const [libraryFilter, setLibraryFilter] = useState<LibraryFilter>('all');
+  const [libraryStatusFilter, setLibraryStatusFilter] = useState<MealLibraryStatusFilter>('all');
+  const [libraryTypeFilter, setLibraryTypeFilter] = useState<MealTypeFilter>('all');
   const [confirmClearSlotId, setConfirmClearSlotId] = useState<string | null>(null);
   const [confirmStatusMealId, setConfirmStatusMealId] = useState<string | null>(null);
   const [confirmUnpublish, setConfirmUnpublish] = useState(false);
-  // Shown when deactivating a meal that's in a published week (409 response)
-  const [publishedMealConfirm, setPublishedMealConfirm] = useState<Meal | null>(null);
+  const [liveMenuConfirm, setLiveMenuConfirm] = useState<LiveMenuConfirm | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [assignErrorMsg, setAssignErrorMsg] = useState<string | null>(null);
   const [conflictSlotId, setConflictSlotId] = useState<string | null>(null);
 
   const { data: weeks = [], isLoading: weeksLoading } = useWeeks();
-  const { data: meals = [], isLoading: mealsLoading } = useMeals();
+  const { data: meals = [], isLoading: mealsLoading } = useMeals({
+    status: libraryStatusFilter,
+    meal_type: libraryTypeFilter === 'all' ? undefined : libraryTypeFilter,
+  });
 
   const currentWeek: Week | undefined = weeks[weekIndex];
   const { data: weekDetail, isLoading: slotsLoading } = useWeekDetail(currentWeek?.id ?? '');
@@ -115,10 +155,6 @@ export default function MenuManager() {
   const clearSlot = useClearSlot(currentWeek?.id ?? '');
   const updateMeal = useUpdateMeal();
   const updateMealStatus = useUpdateMealStatus();
-
-  const filteredMeals = libraryFilter === 'all'
-    ? meals
-    : meals.filter((m) => m.meal_type === libraryFilter);
 
   const slots = weekDetail?.slots ?? [];
   const canPublish = weekDetail?.publishReady ?? false;
@@ -182,17 +218,29 @@ export default function MenuManager() {
     });
   };
 
-  const handleStatusChange = (meal: Meal) => {
+  const requestMealStatusChange = (
+    meal: Meal,
+    targetStatus: 'active' | 'draft',
+    confirmPublishedEdit?: boolean,
+  ) => {
     setErrorMsg(null);
-    const nextStatus = meal.status === 'active' ? 'draft' : 'active';
     updateMealStatus.mutate(
-      { id: meal.id, status: nextStatus },
+      { id: meal.id, status: targetStatus, confirmPublishedEdit },
       {
-        onSuccess: () => setConfirmStatusMealId(null),
+        onSuccess: () => {
+          setConfirmStatusMealId(null);
+          setLiveMenuConfirm(null);
+        },
         onError: (err) => {
           setConfirmStatusMealId(null);
-          if (err instanceof ApiError && err.statusCode === 409) {
-            setPublishedMealConfirm(meal);
+          const conflict = parseMealPublishedWeekConflict(err);
+          if (conflict) {
+            setLiveMenuConfirm({
+              meal,
+              targetStatus,
+              message: conflict.message,
+              affectedWeeks: conflict.affectedWeeks,
+            });
             return;
           }
           setErrorMsg(err instanceof ApiError ? err.message : 'Failed to update meal status');
@@ -201,19 +249,14 @@ export default function MenuManager() {
     );
   };
 
-  const handleStatusChangeForce = (meal: Meal) => {
-    setErrorMsg(null);
-    const nextStatus = meal.status === 'active' ? 'draft' : 'active';
-    updateMealStatus.mutate(
-      { id: meal.id, status: nextStatus, confirmPublishedEdit: true },
-      {
-        onSuccess: () => setPublishedMealConfirm(null),
-        onError: (err) => {
-          setPublishedMealConfirm(null);
-          setErrorMsg(err instanceof ApiError ? err.message : 'Failed to update meal status');
-        },
-      },
-    );
+  const handleStatusChange = (meal: Meal) => {
+    const targetStatus: 'active' | 'draft' =
+      meal.status === 'active' || meal.status === 'updated' ? 'draft' : 'active';
+    requestMealStatusChange(meal, targetStatus);
+  };
+
+  const handleActivateUpdated = (meal: Meal) => {
+    requestMealStatusChange(meal, 'active');
   };
 
   return (
@@ -593,19 +636,47 @@ export default function MenuManager() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* Filters */}
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {([['all', 'All'], ['executive', '🍛 Exec'], ['salad', '🥗 Salad']] as [LibraryFilter, string][]).map(
+          {/* Status filters */}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {(
+              [
+                ['all', 'All'],
+                ['draft', 'Draft'],
+                ['active', 'Active'],
+                ['updated', 'Updated'],
+              ] as [MealLibraryStatusFilter, string][]
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setLibraryStatusFilter(value)}
+                style={{
+                  backgroundColor: libraryStatusFilter === value ? '#333' : '#1A1A1A',
+                  color: libraryStatusFilter === value ? '#FFF' : '#9CA3AF',
+                  padding: '6px 16px',
+                  borderRadius: '20px',
+                  border: `1px solid ${libraryStatusFilter === value ? '#555' : '#333'}`,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {([['all', 'All types'], ['executive', '🍛 Exec'], ['salad', '🥗 Salad']] as [MealTypeFilter, string][]).map(
               ([value, label]) => (
                 <button
                   key={value}
-                  onClick={() => setLibraryFilter(value)}
+                  type="button"
+                  onClick={() => setLibraryTypeFilter(value)}
                   style={{
-                    backgroundColor: libraryFilter === value ? '#333' : '#1A1A1A',
-                    color: libraryFilter === value ? '#FFF' : '#9CA3AF',
+                    backgroundColor: libraryTypeFilter === value ? '#333' : '#1A1A1A',
+                    color: libraryTypeFilter === value ? '#FFF' : '#9CA3AF',
                     padding: '6px 16px',
                     borderRadius: '20px',
-                    border: `1px solid ${libraryFilter === value ? '#555' : '#333'}`,
+                    border: `1px solid ${libraryTypeFilter === value ? '#555' : '#333'}`,
                     fontSize: '14px',
                     cursor: 'pointer',
                   }}
@@ -624,7 +695,7 @@ export default function MenuManager() {
 
           {/* List */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {filteredMeals.map((meal) => {
+            {meals.map((meal) => {
               const isStatusPending =
                 updateMealStatus.isPending && updateMealStatus.variables?.id === meal.id;
               const isConfirmingStatus = confirmStatusMealId === meal.id;
@@ -639,7 +710,7 @@ export default function MenuManager() {
                       borderRadius: isConfirmingStatus ? '12px 12px 0 0' : '12px',
                       border: '1px solid #333',
                       borderBottom: isConfirmingStatus ? 'none' : '1px solid #333',
-                      opacity: meal.status === 'draft' ? 0.6 : 1,
+                      opacity: meal.status === 'draft' ? 0.6 : meal.status === 'updated' ? 0.85 : 1,
                     }}
                   >
                     <MealIcon
@@ -671,40 +742,56 @@ export default function MenuManager() {
                           borderRadius: '4px',
                           fontSize: '12px',
                           fontWeight: 600,
-                          backgroundColor:
-                            meal.status === 'active' ? 'rgba(228,40,29,.10)' : 'transparent',
-                          color: meal.status === 'active' ? 'var(--danger)' : '#6B7280',
-                          border: meal.status === 'draft' ? '1px solid #444' : 'none',
+                          ...mealStatusBadgeStyle(meal.status),
                         }}
                       >
-                        {meal.status === 'active' ? 'Active' : 'Draft'}
+                        {mealStatusLabel(meal.status)}
                       </span>
                       <button
                         className="btn-ghost"
                         style={{ padding: '6px 12px', fontSize: '12px' }}
-                        onClick={() => setEditMeal(meal)}
+                        onClick={() => setEditMealId(meal.id)}
                       >
                         ✏️ Edit
                       </button>
-                      <button
-                        className="btn-ghost"
-                        style={{
-                          padding: '6px 12px',
-                          fontSize: '12px',
-                          opacity: isStatusPending ? 0.5 : 1,
-                          color: meal.status === 'active' ? '#9CA3AF' : 'var(--danger)',
-                        }}
-                        disabled={isStatusPending}
-                        onClick={() =>
-                          setConfirmStatusMealId(isConfirmingStatus ? null : meal.id)
-                        }
-                      >
-                        {isStatusPending
-                          ? '…'
-                          : meal.status === 'active'
-                            ? 'Deactivate'
-                            : 'Activate'}
-                      </button>
+                      {meal.status !== 'active' && (
+                        <button
+                          className="btn-ghost"
+                          style={{
+                            padding: '6px 12px',
+                            fontSize: '12px',
+                            opacity: isStatusPending ? 0.5 : 1,
+                            color: 'var(--danger)',
+                          }}
+                          disabled={isStatusPending}
+                          onClick={() => {
+                            if (meal.status === 'updated') {
+                              handleActivateUpdated(meal);
+                              return;
+                            }
+                            setConfirmStatusMealId(isConfirmingStatus ? null : meal.id);
+                          }}
+                        >
+                          {isStatusPending ? '…' : 'Activate'}
+                        </button>
+                      )}
+                      {meal.status !== 'draft' && (
+                        <button
+                          className="btn-ghost"
+                          style={{
+                            padding: '6px 12px',
+                            fontSize: '12px',
+                            opacity: isStatusPending ? 0.5 : 1,
+                            color: '#9CA3AF',
+                          }}
+                          disabled={isStatusPending}
+                          onClick={() =>
+                            setConfirmStatusMealId(isConfirmingStatus ? null : meal.id)
+                          }
+                        >
+                          {isStatusPending ? '…' : '→ Draft'}
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -723,9 +810,11 @@ export default function MenuManager() {
                       }}
                     >
                       <span style={{ fontSize: '13px', color: '#F87171', flex: 1 }}>
-                        {meal.status === 'active'
-                          ? 'Deactivate this meal? It will be removed from future slot options.'
-                          : 'Activate this meal? It will appear in slot assignment.'}
+                        {meal.status === 'draft'
+                          ? 'Activate this meal? It will appear in slot assignment.'
+                          : meal.status === 'updated'
+                            ? 'Move to draft? Pending edits will be discarded. Live menu slots keep the last confirmed version until you activate again.'
+                            : 'Deactivate this meal? It will be removed from future slot options.'}
                       </span>
                       <button
                         style={{
@@ -733,7 +822,7 @@ export default function MenuManager() {
                           borderRadius: '6px',
                           fontSize: '13px',
                           fontWeight: 700,
-                          backgroundColor: meal.status === 'active' ? '#444' : 'var(--danger)',
+                          backgroundColor: meal.status === 'draft' ? 'var(--danger)' : '#444',
                           color: '#FFF',
                           border: 'none',
                           cursor: 'pointer',
@@ -781,11 +870,12 @@ export default function MenuManager() {
       )}
 
       {/* Edit Meal Modal */}
-      {editMeal && (
+      {editMealId && (
         <EditMealModal
-          meal={editMeal}
+          mealId={editMealId}
           isPending={updateMeal.isPending}
-          onClose={() => setEditMeal(null)}
+          isStatusPending={updateMealStatus.isPending}
+          onClose={() => setEditMealId(null)}
           onPhotoUploaded={(mealId) => {
             setMealPhotoCacheVersion((prev) => ({
               ...prev,
@@ -795,21 +885,19 @@ export default function MenuManager() {
           onSave={(input) => {
             setErrorMsg(null);
             updateMeal.mutate(
-              { id: editMeal.id, input },
+              { id: editMealId, input },
               {
-                onSuccess: () => setEditMeal(null),
                 onError: (err) => {
-                  setEditMeal(null);
                   setErrorMsg(err instanceof Error ? err.message : 'Failed to update meal');
                 },
               },
             );
           }}
+          onActivate={(meal) => handleActivateUpdated(meal)}
         />
       )}
 
-      {/* 409 Published-week deactivation confirmation */}
-      {publishedMealConfirm && (
+      {liveMenuConfirm && (
         <div
           style={{
             position: 'fixed',
@@ -835,18 +923,27 @@ export default function MenuManager() {
             }}
           >
             <h3 style={{ margin: 0, fontSize: '18px', fontFamily: 'Montserrat, sans-serif' }}>
-              Meal is in a published week
+              {liveMenuConfirm.targetStatus === 'active'
+                ? 'This will update the live menu'
+                : 'Meal is in a published week'}
             </h3>
             <p style={{ margin: 0, color: '#9CA3AF', fontSize: '14px', lineHeight: 1.6 }}>
-              <strong style={{ color: '#FFF' }}>{publishedMealConfirm.name_en}</strong> is assigned
-              to a published week. Deactivating it will not remove it from that week, but it won't be
-              available for new slot assignments. Continue?
+              {liveMenuConfirm.message}
             </p>
+            {liveMenuConfirm.affectedWeeks.length > 0 ? (
+              <p style={{ margin: 0, color: '#D1D5DB', fontSize: '13px' }}>
+                Affected weeks: {liveMenuConfirm.affectedWeeks.join(', ')}
+              </p>
+            ) : (
+              <p style={{ margin: 0, color: '#D1D5DB', fontSize: '13px' }}>
+                This meal may appear on multiple days in the live menu.
+              </p>
+            )}
             <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
               <button
                 className="btn-ghost"
                 style={{ flex: 1 }}
-                onClick={() => setPublishedMealConfirm(null)}
+                onClick={() => setLiveMenuConfirm(null)}
               >
                 Cancel
               </button>
@@ -855,7 +952,7 @@ export default function MenuManager() {
                   flex: 1,
                   padding: '10px',
                   borderRadius: '8px',
-                  backgroundColor: '#444',
+                  backgroundColor: 'var(--danger)',
                   color: '#FFF',
                   border: 'none',
                   fontWeight: 700,
@@ -864,9 +961,19 @@ export default function MenuManager() {
                   opacity: updateMealStatus.isPending ? 0.6 : 1,
                 }}
                 disabled={updateMealStatus.isPending}
-                onClick={() => handleStatusChangeForce(publishedMealConfirm)}
+                onClick={() =>
+                  requestMealStatusChange(
+                    liveMenuConfirm.meal,
+                    liveMenuConfirm.targetStatus,
+                    true,
+                  )
+                }
               >
-                {updateMealStatus.isPending ? '…' : 'Deactivate anyway'}
+                {updateMealStatus.isPending
+                  ? '…'
+                  : liveMenuConfirm.targetStatus === 'active'
+                    ? 'Update live menu'
+                    : 'Deactivate anyway'}
               </button>
             </div>
           </div>
@@ -919,7 +1026,7 @@ function AssignDishModal({
   onAssign: (meal: Meal) => void;
 }) {
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<LibraryFilter>('all');
+  const [typeFilter, setTypeFilter] = useState<MealTypeFilter>('all');
   const [selected, setSelected] = useState<Meal | null>(null);
   const debouncedSearch = useDebouncedValue(search.trim());
 
@@ -990,7 +1097,7 @@ function AssignDishModal({
         />
 
         <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-          {([['all', 'All'], ['executive', '🍛 Exec'], ['salad', '🥗 Salad']] as [LibraryFilter, string][]).map(
+          {([['all', 'All'], ['executive', '🍛 Exec'], ['salad', '🥗 Salad']] as [MealTypeFilter, string][]).map(
             ([value, label]) => (
               <button
                 key={value}
@@ -1079,6 +1186,11 @@ function AssignDishModal({
                     {meal.meal_type === 'executive' ? 'Executive' : 'Salad'}
                     {meal.kcal ? ` · ${meal.kcal} kcal` : ''}
                   </div>
+                  {(meal.status === 'updated' || meal.has_pending_changes) && (
+                    <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>
+                      Pending edits (live menu unchanged until Activate)
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1136,14 +1248,17 @@ function AssignDishModal({
 }
 
 function EditMealModal({
-  meal,
+  mealId,
   isPending,
+  isStatusPending,
   onClose,
   onPhotoUploaded,
   onSave,
+  onActivate,
 }: {
-  meal: Meal;
+  mealId: string;
   isPending: boolean;
+  isStatusPending: boolean;
   onClose: () => void;
   onPhotoUploaded: (mealId: string) => void;
   onSave: (input: {
@@ -1157,26 +1272,48 @@ function EditMealModal({
     emoji?: string;
     photo_url?: string | null;
   }) => void;
+  onActivate: (meal: Meal) => void;
 }) {
+  const { data: detail, isLoading: detailLoading } = useMealDetail(mealId);
   const uploadPhoto = usePhotoUpload();
   const photoInputRef = useRef<HTMLInputElement>(null);
 
-  const [nameEn, setNameEn] = useState(meal.name_en);
-  const [nameAr, setNameAr] = useState(meal.name_ar ?? '');
-  const [mealType, setMealType] = useState<MealType>(meal.meal_type ?? 'executive');
-  const [kcal, setKcal] = useState(meal.kcal?.toString() ?? '');
-  const [proteinG, setProteinG] = useState(meal.macros?.protein_g.toString() ?? '');
-  const [carbsG, setCarbsG] = useState(meal.macros?.carbs_g.toString() ?? '');
-  const [fatG, setFatG] = useState(meal.macros?.fat_g.toString() ?? '');
-  const [chefNote, setChefNote] = useState(meal.chef_note ?? '');
-  const [keyIngredients, setKeyIngredients] = useState(meal.key_ingredients ?? '');
-  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(meal.emoji ?? null);
+  const [nameEn, setNameEn] = useState('');
+  const [nameAr, setNameAr] = useState('');
+  const [mealType, setMealType] = useState<MealType>('executive');
+  const [kcal, setKcal] = useState('');
+  const [proteinG, setProteinG] = useState('');
+  const [carbsG, setCarbsG] = useState('');
+  const [fatG, setFatG] = useState('');
+  const [chefNote, setChefNote] = useState('');
+  const [keyIngredients, setKeyIngredients] = useState('');
+  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(meal.photo_url ?? null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState('');
+  const [showPendingBanner, setShowPendingBanner] = useState(false);
 
   const isSubmitting = isPending || uploadPhoto.isPending;
+
+  useEffect(() => {
+    if (!detail) return;
+    const fields = mealEditableFields(detail);
+    setNameEn(fields.name_en);
+    setNameAr(fields.name_ar);
+    setMealType(fields.meal_type ?? 'executive');
+    setKcal(fields.kcal?.toString() ?? '');
+    setProteinG(fields.macros?.protein_g.toString() ?? '');
+    setCarbsG(fields.macros?.carbs_g.toString() ?? '');
+    setFatG(fields.macros?.fat_g.toString() ?? '');
+    setChefNote(fields.chef_note);
+    setKeyIngredients(fields.key_ingredients ?? '');
+    setSelectedEmoji(fields.emoji ?? null);
+    setPhotoPreview(fields.photo_url ?? null);
+    setUploadedPhotoUrl(null);
+    setPhotoFile(null);
+    setShowPendingBanner(detail.status === 'updated');
+  }, [detail]);
 
   useEffect(() => {
     return () => {
@@ -1199,15 +1336,15 @@ function EditMealModal({
   };
 
   const handleUploadPhoto = () => {
-    if (!photoFile || !meal.id) return;
+    if (!photoFile || !mealId) return;
     setPhotoError('');
     uploadPhoto.mutate(
-      { mealId: meal.id, file: photoFile },
+      { mealId, file: photoFile },
       {
         onSuccess: (url) => {
           setUploadedPhotoUrl(url);
           setPhotoFile(null);
-          onPhotoUploaded(meal.id);
+          onPhotoUploaded(mealId);
           // Keep blob preview — CDN photo_url is often unchanged and would show a cached image.
         },
         onError: (err) => {
@@ -1219,7 +1356,7 @@ function EditMealModal({
 
   const handleSave = async () => {
     if (!nameEn.trim()) return;
-    if (!meal.id) {
+    if (!mealId) {
       setPhotoError('Meal ID is missing. Close and reopen the editor.');
       return;
     }
@@ -1230,15 +1367,15 @@ function EditMealModal({
     let savedPhotoUrl =
       uploadedPhotoUrl ??
       (photoPreview && !photoPreview.startsWith('blob:') ? photoPreview : undefined) ??
-      meal.photo_url ??
+      detail?.photo_url ??
       undefined;
 
     if (photoFile) {
       try {
-        savedPhotoUrl = await uploadPhoto.mutateAsync({ mealId: meal.id, file: photoFile });
+        savedPhotoUrl = await uploadPhoto.mutateAsync({ mealId, file: photoFile });
         setUploadedPhotoUrl(savedPhotoUrl);
         setPhotoFile(null);
-        onPhotoUploaded(meal.id);
+        onPhotoUploaded(mealId);
       } catch (err) {
         setPhotoError(err instanceof ApiError ? err.message : 'Photo upload failed.');
         return;
@@ -1262,6 +1399,9 @@ function EditMealModal({
       emoji: selectedEmoji ?? undefined,
       ...(savedPhotoUrl ? { photo_url: savedPhotoUrl } : {}),
     });
+    if (detail && detail.status !== 'draft') {
+      setShowPendingBanner(true);
+    }
   };
 
   const fieldStyle: React.CSSProperties = {
@@ -1325,6 +1465,65 @@ function EditMealModal({
         <h2 style={{ fontSize: '22px', fontFamily: 'Montserrat, sans-serif', margin: 0 }}>
           Edit Meal
         </h2>
+
+        {detailLoading && (
+          <p style={{ color: '#9CA3AF', fontSize: '14px', margin: 0 }}>Loading meal…</p>
+        )}
+
+        {detail && detail.status === 'updated' && (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '12px',
+              fontSize: '12px',
+            }}
+          >
+            <div style={{ backgroundColor: '#222', borderRadius: '8px', padding: '12px', border: '1px solid #333' }}>
+              <div style={{ color: '#9CA3AF', marginBottom: '6px', fontWeight: 600 }}>Live (customers)</div>
+              <div style={{ color: '#FFF' }}>{detail.name_en}</div>
+              {detail.name_ar && <div style={{ color: '#9CA3AF', direction: 'rtl' }}>{detail.name_ar}</div>}
+              {detail.kcal != null && <div style={{ color: '#9CA3AF', marginTop: '4px' }}>{detail.kcal} kcal</div>}
+            </div>
+            <div style={{ backgroundColor: 'rgba(245, 230, 66, 0.06)', borderRadius: '8px', padding: '12px', border: '1px solid rgba(245, 230, 66, 0.2)' }}>
+              <div style={{ color: 'var(--danger)', marginBottom: '6px', fontWeight: 600 }}>Pending</div>
+              <div style={{ color: '#FFF' }}>{detail.pending?.name_en ?? detail.name_en}</div>
+              {(detail.pending?.name_ar ?? detail.name_ar) && (
+                <div style={{ color: '#9CA3AF', direction: 'rtl' }}>{detail.pending?.name_ar ?? detail.name_ar}</div>
+              )}
+              {(detail.pending?.kcal ?? detail.kcal) != null && (
+                <div style={{ color: '#9CA3AF', marginTop: '4px' }}>{detail.pending?.kcal ?? detail.kcal} kcal</div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {showPendingBanner && detail && detail.status !== 'draft' && (
+          <div
+            style={{
+              backgroundColor: 'var(--warn-a10)',
+              border: '1px solid rgba(245, 230, 66, 0.25)',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+            }}
+          >
+            <span style={{ color: '#E5E7EB', fontSize: '13px', lineHeight: 1.5 }}>
+              Saved as pending. The live menu will not change until you Activate.
+            </span>
+            <button
+              type="button"
+              className="btn-primary"
+              style={{ alignSelf: 'flex-start', padding: '8px 16px', fontSize: '13px', opacity: isStatusPending ? 0.7 : 1 }}
+              disabled={isStatusPending}
+              onClick={() => onActivate(detail)}
+            >
+              {isStatusPending ? '…' : 'Activate'}
+            </button>
+          </div>
+        )}
 
         {/* Bilingual names */}
         <div>

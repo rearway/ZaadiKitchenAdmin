@@ -9,8 +9,12 @@ import {
   ImportResultSchema,
   AssignSlotResponseSchema,
   type AssignSlotResponse,
+  MealStatusUpdateResponseSchema,
+  parseMealDetail,
   type AssignableMealsParams,
   type CreateMealInput,
+  type GetMealsParams,
+  type MealDetail,
   type UpdateMealInput,
   type WeekDetail,
   type Slot,
@@ -49,16 +53,29 @@ export async function getWeekDetailApi(weekId: string): Promise<WeekDetail> {
   };
 }
 
-export async function getMealsApi(status?: string) {
-  const res = await client.get('/admin/meals', { params: status ? { status } : undefined });
+export async function getMealsApi(params: GetMealsParams = {}) {
+  const res = await client.get('/admin/meals', {
+    params: {
+      status: params.status ?? 'all',
+      page: 1,
+      per_page: 100,
+      ...(params.meal_type ? { meal_type: params.meal_type } : {}),
+    },
+  });
   return unwrap(res.data, z.object({ meals: z.array(MealSchema) }).transform((d) => d.meals));
 }
 
-/** Assign modal list: active meals only (drafts can't be assigned). Type filter is a UI tab, not a rule. */
+export async function getMealDetailApi(mealId: string): Promise<MealDetail> {
+  const res = await client.get(`/admin/meals/${mealId}`);
+  const payload = unwrap(res.data, z.unknown());
+  return parseMealDetail(payload);
+}
+
+/** Week planner picker: active + updated meals (live version), via context=picker. */
 export async function getAssignableMealsApi(params: AssignableMealsParams) {
   const res = await client.get('/admin/meals', {
     params: {
-      status: 'active',
+      context: 'picker',
       page: 1,
       per_page: 50,
       ...(params.q ? { q: params.q } : {}),
@@ -116,7 +133,7 @@ export async function updateMealStatusApi(
   const body: { status: string; confirm_published_edit?: boolean } = { status };
   if (confirmPublishedEdit) body.confirm_published_edit = true;
   const res = await client.patch(`/admin/meals/${mealId}/status`, body);
-  return unwrap(res.data, MealSchema);
+  return unwrap(res.data, MealStatusUpdateResponseSchema);
 }
 
 /** Step 1 of 3-step S3 photo upload: get a presigned URL from the API. */
