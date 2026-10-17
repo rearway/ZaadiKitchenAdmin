@@ -176,6 +176,35 @@ export function mealEditableFields(detail: MealDetail) {
   };
 }
 
+/** Meal embedded on a week slot (live fields; status may be updated). */
+export const AdminSlotMealSchema = z
+  .object({
+    meal_id: z.string().optional(),
+    id: z.string().optional(),
+    name_en: z.string(),
+    name_ar: z.string().nullable().optional(),
+    kcal: z.number().nullable().optional(),
+    photo_url: z.string().nullable().optional(),
+    meal_type: MealTypeSchema.optional(),
+    status: MealStatusSchema.optional(),
+    emoji: z.string().nullable().optional(),
+  })
+  .transform((m) => ({
+    id: m.meal_id ?? m.id ?? '',
+    name_en: m.name_en,
+    name_ar: m.name_ar ?? null,
+    meal_type: m.meal_type,
+    kcal: m.kcal ?? null,
+    photo_url: m.photo_url ?? null,
+    status: (m.status ?? 'active') as MealStatus,
+    emoji: m.emoji ?? null,
+    chef_note: null,
+    key_ingredients: null,
+    macros: undefined,
+    has_pending_changes: m.status === 'updated',
+  }));
+export type AdminSlotMeal = z.infer<typeof AdminSlotMealSchema>;
+
 // Flat slot shape used throughout the UI
 export const SlotSchema = z.object({
   id: z.string(),
@@ -188,25 +217,106 @@ export const SlotSchema = z.object({
   meal: MealSchema.nullable(),
   is_filled: z.boolean(),
   is_editable: z.boolean(),
+  is_default: z.boolean().optional(),
 });
 export type Slot = z.infer<typeof SlotSchema>;
+export type PlannerSlot = Slot & { is_default: boolean };
+
+export type WeekDayDetail = {
+  delivery_date: string;
+  day_label: string;
+  date_label: string;
+  default_meal_id: { executive: string | null; salad: string | null };
+  can_add_executive: boolean;
+  can_add_salad: boolean;
+  executive_slots: PlannerSlot[];
+  salad_slots: PlannerSlot[];
+};
 
 // Internal schemas for parsing the week detail API response
 const RawApiSlotSchema = z.object({
   slot_id: z.string(),
   meal_type: MealTypeSchema,
   meal_type_label: z.string().optional(),
-  meal: MealSchema.nullable(),
+  meal: z.union([MealSchema, AdminSlotMealSchema]).nullable(),
   is_filled: z.boolean().optional(),
   is_editable: z.boolean().optional(),
+  is_default: z.boolean().optional(),
+});
+
+const DefaultMealIdsSchema = z.object({
+  executive: z.string().nullable(),
+  salad: z.string().nullable(),
 });
 
 const WeekDaySchema = z.object({
   delivery_date: z.string(),
   day_label: z.string(),
   date_label: z.string(),
+  default_meal_id: DefaultMealIdsSchema.optional(),
+  can_add_executive: z.boolean().optional(),
+  can_add_salad: z.boolean().optional(),
+  executive_slots: z.array(RawApiSlotSchema).optional(),
+  salad_slots: z.array(RawApiSlotSchema).optional(),
   slots: z.array(RawApiSlotSchema),
 });
+
+type RawApiDay = z.infer<typeof WeekDaySchema>;
+type RawApiSlot = z.infer<typeof RawApiSlotSchema>;
+
+function parseSlotMeal(mealRaw: z.infer<typeof RawApiSlotSchema>['meal']): Meal | null {
+  if (!mealRaw) return null;
+  const asAdmin = AdminSlotMealSchema.safeParse(mealRaw);
+  if (asAdmin.success) return asAdmin.data;
+  const asMeal = MealSchema.safeParse(mealRaw);
+  return asMeal.success ? asMeal.data : null;
+}
+
+function mapRawSlotToPlannerSlot(slot: RawApiSlot, day: RawApiDay): PlannerSlot {
+  const meal = parseSlotMeal(slot.meal);
+  return {
+    id: slot.slot_id,
+    day: day.day_label.toLowerCase(),
+    day_label: day.day_label,
+    date_label: day.date_label,
+    delivery_date: day.delivery_date,
+    meal_type: slot.meal_type,
+    meal_type_label: slot.meal_type_label,
+    meal,
+    is_filled: slot.is_filled ?? !!meal,
+    is_editable: slot.is_editable ?? true,
+    is_default: slot.is_default ?? false,
+  };
+}
+
+export function mapApiDayToWeekDayDetail(day: RawApiDay): WeekDayDetail {
+  const executiveRaw =
+    day.executive_slots?.length
+      ? day.executive_slots
+      : day.slots.filter((s) => s.meal_type === 'executive');
+  const saladRaw =
+    day.salad_slots?.length
+      ? day.salad_slots
+      : day.slots.filter((s) => s.meal_type === 'salad');
+  return {
+    delivery_date: day.delivery_date,
+    day_label: day.day_label,
+    date_label: day.date_label,
+    default_meal_id: day.default_meal_id ?? { executive: null, salad: null },
+    can_add_executive: day.can_add_executive ?? executiveRaw.length < 3,
+    can_add_salad: day.can_add_salad ?? saladRaw.length < 3,
+    executive_slots: executiveRaw.map((s) => mapRawSlotToPlannerSlot(s, day)),
+    salad_slots: saladRaw.map((s) => mapRawSlotToPlannerSlot(s, day)),
+  };
+}
+
+export function findPlannerSlot(detail: WeekDetail, slotId: string): PlannerSlot | undefined {
+  for (const day of detail.days) {
+    const found = [...day.executive_slots, ...day.salad_slots].find((s) => s.id === slotId);
+    if (found) return found;
+  }
+  return detail.slots.find((s) => s.id === slotId) as PlannerSlot | undefined;
+}
 
 export type WeekStatus = 'draft' | 'published' | 'past';
 
@@ -231,8 +341,24 @@ export type WeekDetail = {
   isEditable: boolean;
   publishReady: boolean;
   publishBlockedReason: string | null;
+  days: WeekDayDetail[];
+  /** Legacy flat list (exec then salad per day). */
   slots: Slot[];
 };
+
+export const WeekFillStatusSchema = z.object({
+  publish_ready: z.boolean(),
+  filled_slots: z.number().optional(),
+  total_slots: z.number().optional(),
+});
+export type WeekFillStatus = z.infer<typeof WeekFillStatusSchema>;
+
+export const DaySlotMutationResponseSchema = z.object({
+  slot_id: z.string(),
+  meal: AdminSlotMealSchema.nullable().optional(),
+  week_fill_status: WeekFillStatusSchema,
+});
+export type DaySlotMutationResponse = z.infer<typeof DaySlotMutationResponseSchema>;
 
 // Week list item (no slots — those come from the detail endpoint)
 export const WeekSchema = z
@@ -275,12 +401,8 @@ export const AssignSlotResponseSchema = z.object({
   slot_id: z.string(),
   meal_type: MealTypeSchema.optional(),
   delivery_date: z.string().optional(),
-  meal: MealSchema,
-  week_fill_status: z.object({
-    filled_slots: z.number(),
-    total_slots: z.number(),
-    publish_ready: z.boolean(),
-  }),
+  meal: z.union([MealSchema, AdminSlotMealSchema]).optional(),
+  week_fill_status: WeekFillStatusSchema,
 });
 export type AssignSlotResponse = z.infer<typeof AssignSlotResponseSchema>;
 
@@ -289,21 +411,23 @@ export type AssignableMealsParams = {
   meal_type?: MealType;
 };
 
-const DaySaladConflictDetailsSchema = z.object({
-  delivery_date: z.string().optional(),
-  existing_slot_id: z.string().optional(),
-  existing_meal_name: z.string().optional(),
-});
-
 export const ASSIGN_ERROR = {
-  DAY_SALAD_ALREADY_ASSIGNED: 'DAY_SALAD_ALREADY_ASSIGNED',
+  DAY_MEAL_TYPE_LIMIT: 'DAY_MEAL_TYPE_LIMIT',
   MEAL_IS_DRAFT: 'MEAL_IS_DRAFT',
   SLOT_NOT_EDITABLE: 'SLOT_NOT_EDITABLE',
   RESOURCE_NOT_FOUND: 'RESOURCE_NOT_FOUND',
 } as const;
 
+export const SLOT_ERROR = {
+  CANNOT_CLEAR_DEFAULT: 'CANNOT_CLEAR_DEFAULT',
+} as const;
+
+export const WEEK_ERROR = {
+  WEEK_NOT_COMPLETE: 'WEEK_NOT_COMPLETE',
+} as const;
+
 export type AssignError =
-  | { kind: 'day_salad_conflict'; message: string; existingSlotId: string | null }
+  | { kind: 'day_meal_type_limit'; message: string }
   | { kind: 'meal_is_draft'; message: string }
   | { kind: 'slot_not_editable'; message: string }
   | { kind: 'not_found'; message: string }
@@ -314,14 +438,8 @@ export function classifyAssignError(err: unknown): AssignError {
   const errorCode = err instanceof ApiError ? err.errorCode : null;
   const message = err instanceof Error ? err.message : '';
   switch (errorCode) {
-    case ASSIGN_ERROR.DAY_SALAD_ALREADY_ASSIGNED: {
-      const parsed = DaySaladConflictDetailsSchema.safeParse(err instanceof ApiError ? err.details : undefined);
-      return {
-        kind: 'day_salad_conflict',
-        message,
-        existingSlotId: parsed.success ? (parsed.data.existing_slot_id ?? null) : null,
-      };
-    }
+    case ASSIGN_ERROR.DAY_MEAL_TYPE_LIMIT:
+      return { kind: 'day_meal_type_limit', message: message || 'This day already has 3 dishes for that stream.' };
     case ASSIGN_ERROR.MEAL_IS_DRAFT:
       return { kind: 'meal_is_draft', message: 'Activate this meal before assigning it.' };
     case ASSIGN_ERROR.SLOT_NOT_EDITABLE:

@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   useWeeks,
   useWeekDetail,
@@ -7,6 +8,8 @@ import {
   useMealDetail,
   useAssignableMeals,
   useAssignSlot,
+  useAddDaySlot,
+  useSetDayDefault,
   useClearSlot,
   usePublishWeek,
   useUnpublishWeek,
@@ -14,22 +17,28 @@ import {
   useUpdateMealStatus,
   usePhotoUpload,
 } from '@/features/menu/api/menu.queries';
+import WeekPlannerDay from '@/features/menu/components/WeekPlannerDay';
 import type {
   Meal,
   MealLibraryStatusFilter,
   MealStatus,
   MealType,
-  Slot,
+  PlannerSlot,
   Week,
+  WeekDetail,
 } from '@/features/menu/model/menu.schema';
 import {
   DAY_LABEL,
+  SLOT_ERROR,
+  WEEK_ERROR,
   classifyAssignError,
+  findPlannerSlot,
   isWeekEditable,
   mealEditableFields,
   parseMealPublishedWeekConflict,
   toKeyIngredientsArray,
 } from '@/features/menu/model/menu.schema';
+import { queryKeys } from '@/shared/lib/api/queryKeys';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { ApiError } from '@/shared/types/api';
 
@@ -127,7 +136,9 @@ export default function MenuManager() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'planner' | 'library'>('planner');
   const [weekIndex, setWeekIndex] = useState(0);
-  const [assignModalSlot, setAssignModalSlot] = useState<Slot | null>(null);
+  const [assignModalSlot, setAssignModalSlot] = useState<PlannerSlot | null>(null);
+  const [pendingAddKey, setPendingAddKey] = useState<string | null>(null);
+  const qc = useQueryClient();
   const [editMealId, setEditMealId] = useState<string | null>(null);
   /** Bumps CDN photo URLs in the library after a successful upload (same path, new bytes). */
   const [mealPhotoCacheVersion, setMealPhotoCacheVersion] = useState<Record<string, number>>({});
@@ -139,7 +150,6 @@ export default function MenuManager() {
   const [liveMenuConfirm, setLiveMenuConfirm] = useState<LiveMenuConfirm | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [assignErrorMsg, setAssignErrorMsg] = useState<string | null>(null);
-  const [conflictSlotId, setConflictSlotId] = useState<string | null>(null);
 
   const { data: weeks = [], isLoading: weeksLoading } = useWeeks();
   const { data: meals = [], isLoading: mealsLoading } = useMeals({
@@ -152,43 +162,37 @@ export default function MenuManager() {
   const publishWeek = usePublishWeek();
   const unpublishWeek = useUnpublishWeek();
   const assignSlot = useAssignSlot(currentWeek?.id ?? '');
+  const addDaySlot = useAddDaySlot(currentWeek?.id ?? '');
+  const setDayDefault = useSetDayDefault(currentWeek?.id ?? '');
   const clearSlot = useClearSlot(currentWeek?.id ?? '');
   const updateMeal = useUpdateMeal();
   const updateMealStatus = useUpdateMealStatus();
 
-  const slots = weekDetail?.slots ?? [];
+  const plannerDays = weekDetail?.days ?? [];
   const canPublish = weekDetail?.publishReady ?? false;
   const canEditWeek = isWeekEditable(weekDetail);
 
-  const openAssignModal = (slot: Slot) => {
+  const openAssignModal = (slot: PlannerSlot) => {
     setConfirmClearSlotId(null);
     setAssignErrorMsg(null);
-    setConflictSlotId(null);
     setAssignModalSlot(slot);
   };
 
   const closeAssignModal = () => {
     setAssignModalSlot(null);
     setAssignErrorMsg(null);
-    setConflictSlotId(null);
   };
 
   const handleAssign = (slotId: string, meal: Meal) => {
     setErrorMsg(null);
     setAssignErrorMsg(null);
-    setConflictSlotId(null);
     assignSlot.mutate(
       { slotId, meal },
       {
         onSuccess: closeAssignModal,
         onError: (err) => {
           const assignError = classifyAssignError(err);
-          if (assignError.kind === 'day_salad_conflict') {
-            setAssignErrorMsg(assignError.message);
-            setConflictSlotId(assignError.existingSlotId);
-            return;
-          }
-          if (assignError.kind === 'meal_is_draft') {
+          if (assignError.kind === 'day_meal_type_limit' || assignError.kind === 'meal_is_draft') {
             setAssignErrorMsg(assignError.message);
             return;
           }
@@ -197,6 +201,41 @@ export default function MenuManager() {
         },
       },
     );
+  };
+
+  const handleAddSlot = (deliveryDate: string, mealType: MealType) => {
+    if (!currentWeek) return;
+    setErrorMsg(null);
+    const key = `${deliveryDate}-${mealType}`;
+    setPendingAddKey(key);
+    addDaySlot.mutate(
+      { deliveryDate, meal_type: mealType },
+      {
+        onSuccess: async (res) => {
+          setPendingAddKey(null);
+          await qc.refetchQueries({ queryKey: queryKeys.menu.weekDetail(currentWeek.id) });
+          if (!res.meal) {
+            const detail = qc.getQueryData<WeekDetail>(queryKeys.menu.weekDetail(currentWeek.id));
+            const slot = detail ? findPlannerSlot(detail, res.slot_id) : undefined;
+            if (slot) openAssignModal(slot);
+          }
+        },
+        onError: (err) => {
+          setPendingAddKey(null);
+          setErrorMsg(err instanceof ApiError ? err.message : 'Failed to add slot');
+        },
+      },
+    );
+  };
+
+  const handleSetDefault = (slot: PlannerSlot) => {
+    if (!currentWeek || !slot.meal?.id || !slot.delivery_date) return;
+    setErrorMsg(null);
+    setDayDefault.mutate({
+      deliveryDate: slot.delivery_date,
+      meal_type: slot.meal_type,
+      meal_id: slot.meal.id,
+    });
   };
 
   const formatWeekRange = (week: Week) => {
@@ -213,6 +252,12 @@ export default function MenuManager() {
       onSuccess: () => setConfirmClearSlotId(null),
       onError: (err) => {
         setConfirmClearSlotId(null);
+        if (err instanceof ApiError && err.errorCode === SLOT_ERROR.CANNOT_CLEAR_DEFAULT) {
+          setErrorMsg(
+            err.message || 'Set another default dish on this stream first, then clear this slot.',
+          );
+          return;
+        }
         setErrorMsg(err instanceof Error ? err.message : 'Failed to clear slot');
       },
     });
@@ -320,16 +365,23 @@ export default function MenuManager() {
             >
               ‹
             </button>
-            <div
-              style={{
-                backgroundColor: 'rgba(228,40,29,.10)',
-                color: 'var(--danger)',
-                padding: '8px 16px',
-                borderRadius: '16px',
-                fontWeight: 600,
-              }}
-            >
-              {currentWeek ? formatWeekRange(currentWeek) : '…'}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div
+                style={{
+                  backgroundColor: 'rgba(228,40,29,.10)',
+                  color: 'var(--danger)',
+                  padding: '8px 16px',
+                  borderRadius: '16px',
+                  fontWeight: 600,
+                }}
+              >
+                {currentWeek ? formatWeekRange(currentWeek) : '…'}
+              </div>
+              {currentWeek?.fill_status?.label && (
+                <span style={{ fontSize: '12px', color: '#9CA3AF', paddingInlineStart: '4px' }}>
+                  {currentWeek.fill_status.label}
+                </span>
+              )}
             </div>
             <button
               className="btn-ghost"
@@ -347,169 +399,30 @@ export default function MenuManager() {
             </div>
           )}
 
-          {/* Daily Slots */}
           {!weeksLoading && !slotsLoading && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {slots.map((slot) => {
-                const dayLabel = DAY_LABEL[slot.day] ?? slot.day.toUpperCase();
-                const isFirst = slot.day === slots[0]?.day;
-                const isClearPending = clearSlot.isPending && clearSlot.variables === slot.id;
-                const canEditSlot = canEditWeek && slot.is_editable;
-                const slotBorder = conflictSlotId === slot.id ? '1px solid var(--danger)' : '1px solid #333';
-                const isDishTypeDifferent = !!slot.meal?.meal_type && slot.meal.meal_type !== slot.meal_type;
-                return (
-                  <div key={slot.id}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '24px',
-                        backgroundColor: '#1A1A1A',
-                        padding: '16px 24px',
-                        borderRadius: confirmClearSlotId === slot.id ? '12px 12px 0 0' : '12px',
-                        border: slotBorder,
-                        borderBottom: confirmClearSlotId === slot.id ? 'none' : slotBorder,
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: '60px',
-                          color: isFirst ? 'var(--danger)' : '#9CA3AF',
-                          fontWeight: isFirst ? 'bold' : 'normal',
-                        }}
-                      >
-                        {dayLabel}
-                      </div>
-
-                      <div style={{ flex: 1 }}>
-                        {slot.meal ? (
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                              <MealIcon meal={slot.meal} size={44} />
-                              <div>
-                                <h4 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  {slot.meal.name_en}
-                                  {isDishTypeDifferent && (
-                                    <span
-                                      style={{
-                                        padding: '2px 8px',
-                                        borderRadius: '4px',
-                                        fontSize: '12px',
-                                        fontWeight: 600,
-                                        backgroundColor: 'rgba(228,40,29,.10)',
-                                        color: 'var(--danger)',
-                                      }}
-                                    >
-                                      {slot.meal.meal_type === 'executive' ? 'Executive' : 'Salad'}
-                                    </span>
-                                  )}
-                                </h4>
-                                {slot.meal.name_ar && (
-                                  <p style={{ fontSize: '13px', color: '#9CA3AF', margin: '0 0 2px', direction: 'rtl', textAlign: 'left' }}>
-                                    {slot.meal.name_ar}
-                                  </p>
-                                )}
-                                <span style={{ fontSize: '13px', color: '#9CA3AF' }}>
-                                  {slot.meal_type === 'executive' ? 'Executive' : 'Salad'}
-                                  {slot.meal.kcal ? ` · ${slot.meal.kcal} kcal` : ''}
-                                </span>
-                              </div>
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <button
-                                className="btn-ghost"
-                                style={{ padding: '8px', opacity: canEditSlot ? 1 : 0.5 }}
-                                disabled={!canEditSlot}
-                                onClick={() => openAssignModal(slot)}
-                              >
-                                ✏️ Edit
-                              </button>
-                              <button
-                                className="btn-ghost"
-                                style={{ padding: '8px', color: '#9CA3AF', opacity: canEditSlot ? 1 : 0.5 }}
-                                onClick={() => setConfirmClearSlotId(
-                                  confirmClearSlotId === slot.id ? null : slot.id
-                                )}
-                                disabled={!canEditSlot || isClearPending}
-                              >
-                                {isClearPending ? '…' : '✕'}
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div
-                            onClick={canEditSlot ? () => openAssignModal(slot) : undefined}
-                            style={{
-                              border: '1px dashed #444',
-                              borderRadius: '8px',
-                              padding: '16px',
-                              textAlign: 'center',
-                              color: '#9CA3AF',
-                              cursor: canEditSlot ? 'pointer' : 'not-allowed',
-                              opacity: canEditSlot ? 1 : 0.5,
-                              transition: 'border-color 0.2s',
-                            }}
-                            onMouseOver={canEditSlot ? (e) => (e.currentTarget.style.borderColor = 'var(--danger)') : undefined}
-                            onMouseOut={canEditSlot ? (e) => (e.currentTarget.style.borderColor = '#444') : undefined}
-                          >
-                            {canEditSlot ? '+ Add meal' : 'No meal assigned'}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Inline clear confirmation */}
-                    {confirmClearSlotId === slot.id && (
-                      <div
-                        style={{
-                          backgroundColor: 'rgba(220,38,38,0.06)',
-                          border: '1px solid rgba(220,38,38,0.2)',
-                          borderTop: 'none',
-                          borderRadius: '0 0 12px 12px',
-                          padding: '12px 24px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                        }}
-                      >
-                        <span style={{ fontSize: '13px', color: '#F87171', flex: 1 }}>
-                          Remove this meal from the slot?
-                        </span>
-                        <button
-                          style={{
-                            padding: '6px 14px',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            backgroundColor: 'var(--danger)',
-                            color: '#FFF',
-                            border: 'none',
-                            cursor: 'pointer',
-                            opacity: isClearPending ? 0.6 : 1,
-                          }}
-                          disabled={isClearPending}
-                          onClick={() => handleClearSlot(slot.id)}
-                        >
-                          {isClearPending ? 'Removing…' : 'Confirm remove'}
-                        </button>
-                        <button
-                          className="btn-ghost"
-                          style={{ padding: '6px 12px', fontSize: '13px' }}
-                          onClick={() => setConfirmClearSlotId(null)}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              {plannerDays.map((day) => (
+                <WeekPlannerDay
+                  key={day.delivery_date}
+                  day={day}
+                  canEditWeek={canEditWeek}
+                  confirmClearSlotId={confirmClearSlotId}
+                  clearPendingSlotId={clearSlot.isPending ? clearSlot.variables ?? null : null}
+                  highlightSlotId={null}
+                  mealPhotoCacheVersion={mealPhotoCacheVersion}
+                  MealIcon={MealIcon}
+                  onOpenAssign={openAssignModal}
+                  onRequestClear={(slotId) =>
+                    setConfirmClearSlotId(confirmClearSlotId === slotId ? null : slotId)
+                  }
+                  onConfirmClear={handleClearSlot}
+                  onCancelClear={() => setConfirmClearSlotId(null)}
+                  onSetDefault={handleSetDefault}
+                  onAddSlot={handleAddSlot}
+                  pendingAddKey={pendingAddKey}
+                  setDefaultPending={setDayDefault.isPending}
+                />
+              ))}
             </div>
           )}
 
@@ -624,8 +537,13 @@ export default function MenuManager() {
                   if (!currentWeek) return;
                   setErrorMsg(null);
                   publishWeek.mutate(currentWeek.id, {
-                    onError: (err) =>
-                      setErrorMsg(err instanceof Error ? err.message : 'Failed to publish week'),
+                    onError: (err) => {
+                      if (err instanceof ApiError && err.errorCode === WEEK_ERROR.WEEK_NOT_COMPLETE) {
+                        setErrorMsg(err.message);
+                        return;
+                      }
+                      setErrorMsg(err instanceof Error ? err.message : 'Failed to publish week');
+                    },
                   });
                 }}
               >
@@ -1018,7 +936,7 @@ function AssignDishModal({
   onClose,
   onAssign,
 }: {
-  slot: Slot;
+  slot: PlannerSlot;
   isPending: boolean;
   errorMessage: string | null;
   onSelectionChange: () => void;

@@ -16,6 +16,10 @@ import {
   type GetMealsParams,
   type MealDetail,
   type UpdateMealInput,
+  DaySlotMutationResponseSchema,
+  mapApiDayToWeekDayDetail,
+  type DaySlotMutationResponse,
+  type MealType,
   type WeekDetail,
   type Slot,
 } from '../model/menu.schema';
@@ -29,28 +33,37 @@ export async function getWeekDetailApi(weekId: string): Promise<WeekDetail> {
   const res = await client.get(`/admin/menu/weeks/${weekId}`);
   type RawDetail = z.infer<typeof WeekDetailApiSchema>;
   const raw = unwrap<RawDetail>(res.data, WeekDetailApiSchema);
-  const slots: Slot[] = raw.days.flatMap((day) =>
-    day.slots.map((slot) => ({
-      id: slot.slot_id,
-      day: day.day_label.toLowerCase(),
-      day_label: day.day_label,
-      date_label: day.date_label,
-      delivery_date: day.delivery_date,
-      meal_type: slot.meal_type,
-      meal_type_label: slot.meal_type_label,
-      meal: slot.meal,
-      is_filled: slot.is_filled ?? false,
-      is_editable: slot.is_editable ?? true,
-    })),
-  );
+  const days = raw.days.map(mapApiDayToWeekDayDetail);
+  const slots: Slot[] = days.flatMap((day) => [...day.executive_slots, ...day.salad_slots]);
   return {
     weekId: raw.week_id,
     status: raw.status,
     isEditable: raw.is_editable ?? true,
     publishReady: raw.publish_ready ?? false,
     publishBlockedReason: raw.publish_blocked_reason ?? null,
+    days,
     slots,
   };
+}
+
+export async function addDaySlotApi(
+  weekId: string,
+  deliveryDate: string,
+  input: { meal_type: MealType; meal_id?: string },
+): Promise<DaySlotMutationResponse> {
+  const res = await client.post(`/admin/menu/weeks/${weekId}/days/${deliveryDate}/slots`, {
+    meal_type: input.meal_type,
+    ...(input.meal_id ? { meal_id: input.meal_id } : {}),
+  });
+  return unwrap(res.data, DaySlotMutationResponseSchema);
+}
+
+export async function setDayDefaultApi(
+  weekId: string,
+  deliveryDate: string,
+  input: { meal_type: MealType; meal_id: string },
+) {
+  await client.patch(`/admin/menu/weeks/${weekId}/days/${deliveryDate}/default`, input);
 }
 
 export async function getMealsApi(params: GetMealsParams = {}) {
