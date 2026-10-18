@@ -231,11 +231,18 @@ export default function MenuManager() {
   const handleSetDefault = (slot: PlannerSlot) => {
     if (!currentWeek || !slot.meal?.id || !slot.delivery_date) return;
     setErrorMsg(null);
-    setDayDefault.mutate({
-      deliveryDate: slot.delivery_date,
-      meal_type: slot.meal_type,
-      meal_id: slot.meal.id,
-    });
+    setDayDefault.mutate(
+      {
+        deliveryDate: slot.delivery_date,
+        meal_type: slot.meal_type,
+        meal_id: slot.meal.id,
+      },
+      {
+        onError: (err) => {
+          setErrorMsg(err instanceof ApiError ? err.message : 'Failed to set default dish');
+        },
+      },
+    );
   };
 
   const formatWeekRange = (week: Week) => {
@@ -505,7 +512,15 @@ export default function MenuManager() {
                           if (!currentWeek) return;
                           setErrorMsg(null);
                           unpublishWeek.mutate(currentWeek.id, {
-                            onSuccess: () => setConfirmUnpublish(false),
+                            onSuccess: async () => {
+                              setConfirmUnpublish(false);
+                              await Promise.all([
+                                qc.invalidateQueries({ queryKey: queryKeys.menu.weeks }),
+                                qc.invalidateQueries({
+                                  queryKey: queryKeys.menu.weekDetail(currentWeek.id),
+                                }),
+                              ]);
+                            },
                             onError: (err) =>
                               setErrorMsg(err instanceof Error ? err.message : 'Failed to unpublish week'),
                           });

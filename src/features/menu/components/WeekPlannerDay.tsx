@@ -67,14 +67,16 @@ function StreamColumn({
   pendingAddKey: string | null;
   setDefaultPending: boolean;
 }) {
-  const canEditStream = canEditWeek && slots.every((s) => s.is_editable);
+  const filledCount = slots.filter((s) => s.meal).length;
+  const canAddInStream = canEditWeek && canAdd;
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
       <div style={{ fontSize: '13px', fontWeight: 600, color: '#9CA3AF', marginBottom: '4px' }}>{title}</div>
       {slots.map((slot) => {
         const isClearPending = clearPendingSlotId === slot.id;
-        const canEditSlot = canEditStream && slot.is_editable;
+        const canEditSlot = canEditWeek && slot.is_editable;
+        const canMakeDefault = !slot.is_default && !!slot.meal && filledCount > 1;
         const border =
           highlightSlotId === slot.id || confirmClearSlotId === slot.id
             ? '1px solid var(--danger)'
@@ -143,15 +145,22 @@ function StreamColumn({
                       >
                         Edit
                       </button>
-                      {!slot.is_default && slot.meal && (
+                      {canMakeDefault && (
                         <button
                           type="button"
                           className="btn-ghost"
-                          style={{ padding: '4px 8px', fontSize: '11px', opacity: setDefaultPending ? 0.6 : 1 }}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            color: 'var(--danger)',
+                            opacity: setDefaultPending ? 0.6 : 1,
+                          }}
                           disabled={setDefaultPending}
                           onClick={() => onSetDefault(slot)}
+                          title="Set as the default dish for this day"
                         >
-                          ★ Default
+                          Make default
                         </button>
                       )}
                       <button
@@ -231,7 +240,7 @@ function StreamColumn({
           </div>
         );
       })}
-      {canEditStream && canAdd && (
+      {canAddInStream && (
         <button
           type="button"
           className="btn-ghost"

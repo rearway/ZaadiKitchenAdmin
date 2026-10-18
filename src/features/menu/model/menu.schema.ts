@@ -289,6 +289,20 @@ function mapRawSlotToPlannerSlot(slot: RawApiSlot, day: RawApiDay): PlannerSlot 
   };
 }
 
+/** Prefer day.default_meal_id when set; falls back to per-slot is_default from the API. */
+function applyStreamDefaultFlags(
+  slots: PlannerSlot[],
+  defaultMealId: string | null,
+): PlannerSlot[] {
+  if (!defaultMealId) {
+    return slots;
+  }
+  return slots.map((slot) => ({
+    ...slot,
+    is_default: slot.meal?.id ? slot.meal.id === defaultMealId : false,
+  }));
+}
+
 export function mapApiDayToWeekDayDetail(day: RawApiDay): WeekDayDetail {
   const executiveRaw =
     day.executive_slots?.length
@@ -298,15 +312,24 @@ export function mapApiDayToWeekDayDetail(day: RawApiDay): WeekDayDetail {
     day.salad_slots?.length
       ? day.salad_slots
       : day.slots.filter((s) => s.meal_type === 'salad');
+  const defaultMealId = day.default_meal_id ?? { executive: null, salad: null };
+  const executiveSlots = applyStreamDefaultFlags(
+    executiveRaw.map((s) => mapRawSlotToPlannerSlot(s, day)),
+    defaultMealId.executive,
+  );
+  const saladSlots = applyStreamDefaultFlags(
+    saladRaw.map((s) => mapRawSlotToPlannerSlot(s, day)),
+    defaultMealId.salad,
+  );
   return {
     delivery_date: day.delivery_date,
     day_label: day.day_label,
     date_label: day.date_label,
-    default_meal_id: day.default_meal_id ?? { executive: null, salad: null },
+    default_meal_id: defaultMealId,
     can_add_executive: day.can_add_executive ?? executiveRaw.length < 3,
     can_add_salad: day.can_add_salad ?? saladRaw.length < 3,
-    executive_slots: executiveRaw.map((s) => mapRawSlotToPlannerSlot(s, day)),
-    salad_slots: saladRaw.map((s) => mapRawSlotToPlannerSlot(s, day)),
+    executive_slots: executiveSlots,
+    salad_slots: saladSlots,
   };
 }
 
