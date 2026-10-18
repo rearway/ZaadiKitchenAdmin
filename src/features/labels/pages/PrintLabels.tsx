@@ -540,34 +540,43 @@ function LabelPreviewModal({ label, onClose, onDownload, isDownloading }: LabelP
             style={{
               backgroundColor: '#1A1A1A',
               color: '#FFF',
-              padding: '16px',
+              padding: '10px 12px',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
+              flexShrink: 0,
             }}
           >
-            <img src="/brand/platio-logo-white.svg" alt="Platio" style={{ height: '18px', width: 'auto' }} />
-            <div style={{ fontSize: '12px', letterSpacing: '1px' }}>
+            <img src="/brand/platio-logo-white.svg" alt="Platio" style={{ height: '16px', width: 'auto' }} />
+            <div style={{ fontSize: '11px', letterSpacing: '0.5px' }}>
               KITCHEN · FRESH DAILY LUNCH
             </div>
           </div>
 
-          <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <h1 style={{ fontSize: '24px', fontWeight: 800, margin: 0, marginBottom: '4px' }}>
+          <div
+            style={{
+              padding: '12px 16px 10px',
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <h1 style={{ fontSize: '22px', fontWeight: 800, margin: 0, marginBottom: '2px', lineHeight: 1.15 }}>
               {label.customer_name}
             </h1>
             {label.customer_phone ? (
-              <p style={{ fontSize: '14px', color: '#444', margin: 0, marginBottom: '8px', fontWeight: 600 }}>
+              <p style={{ fontSize: '13px', color: '#444', margin: 0, marginBottom: '4px', fontWeight: 600 }}>
                 {label.customer_phone}
               </p>
             ) : null}
-            <p style={{ fontSize: '16px', color: '#333', margin: 0, marginBottom: '4px' }}>
+            <p style={{ fontSize: '15px', color: '#333', margin: 0, marginBottom: '2px', lineHeight: 1.25 }}>
               {label.building ?? ''}
             </p>
-            <p style={{ fontSize: '16px', color: '#333', margin: 0, marginBottom: '16px' }}>
+            <p style={{ fontSize: '15px', color: '#333', margin: 0, marginBottom: '6px', lineHeight: 1.25 }}>
               {[label.floor, label.desk_area, label.gate].filter(Boolean).join(' · ')}
             </p>
-            <p style={{ fontSize: '14px', color: '#666', margin: 0, marginBottom: '24px' }}>
+            <p style={{ fontSize: '13px', color: '#666', margin: 0, marginBottom: '8px' }}>
               Riyadh, SA
             </p>
 
@@ -577,6 +586,7 @@ function LabelPreviewModal({ label, onClose, onDownload, isDownloading }: LabelP
                 justifyContent: 'space-between',
                 alignItems: 'flex-end',
                 marginTop: 'auto',
+                paddingTop: '4px',
               }}
             >
               <div>
@@ -589,7 +599,7 @@ function LabelPreviewModal({ label, onClose, onDownload, isDownloading }: LabelP
                     fontSize: '14px',
                     fontWeight: 'bold',
                     display: 'inline-block',
-                    marginBottom: label.meal_name ? '4px' : '8px',
+                    marginBottom: label.meal_name ? '2px' : '4px',
                   }}
                 >
                   {label.meal_type === 'executive' ? '🍛 Executive Meal' : '🥗 Salad Meal'}
@@ -597,28 +607,28 @@ function LabelPreviewModal({ label, onClose, onDownload, isDownloading }: LabelP
                 {label.meal_name ? (
                   <div
                     style={{
-                      fontSize: '13px',
+                      fontSize: '12px',
                       color: '#333',
                       fontWeight: 700,
-                      marginBottom: '8px',
+                      marginBottom: '4px',
                       maxWidth: '220px',
-                      lineHeight: 1.3,
+                      lineHeight: 1.2,
                     }}
                   >
                     {label.meal_name}
                   </div>
                 ) : null}
-                <div style={{ fontSize: '12px', color: '#666' }}>
+                <div style={{ fontSize: '11px', color: '#666', lineHeight: 1.2 }}>
                   {deliveryDateLabel} · Lunch delivery
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
+                <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px' }}>
                   {label.order_ref ?? ''}
                 </div>
                 <div
                   style={{
-                    height: '32px',
+                    height: '28px',
                     width: '120px',
                     backgroundImage:
                       'repeating-linear-gradient(to right, #000, #000 2px, transparent 2px, transparent 4px, #000 4px, #000 5px, transparent 5px, transparent 8px)',
