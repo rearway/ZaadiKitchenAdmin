@@ -363,10 +363,22 @@ export default function PrintLabels() {
                   </div>
 
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '24px' }}>
-                    <div style={{ width: '150px' }}>
+                    <div style={{ width: '160px' }}>
                       <h4 style={{ fontWeight: 600, fontSize: '15px', margin: 0 }}>{label.customer_name}</h4>
+                      {label.customer_phone ? (
+                        <p style={{ color: '#9CA3AF', fontSize: '13px', margin: '4px 0 0' }}>
+                          {label.customer_phone}
+                        </p>
+                      ) : null}
                     </div>
-                    <div style={{ color: '#9CA3AF', fontSize: '14px', flex: 1 }}>{formatLocation(label)}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {label.meal_name ? (
+                        <p style={{ color: '#E5E7EB', fontSize: '14px', margin: '0 0 4px', fontWeight: 500 }}>
+                          {label.meal_name}
+                        </p>
+                      ) : null}
+                      <div style={{ color: '#9CA3AF', fontSize: '14px' }}>{formatLocation(label)}</div>
+                    </div>
                     <div
                       style={{
                         backgroundColor: 'rgba(228,40,29,.10)',
@@ -541,9 +553,14 @@ function LabelPreviewModal({ label, onClose, onDownload, isDownloading }: LabelP
           </div>
 
           <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <h1 style={{ fontSize: '24px', fontWeight: 800, margin: 0, marginBottom: '8px' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: 800, margin: 0, marginBottom: '4px' }}>
               {label.customer_name}
             </h1>
+            {label.customer_phone ? (
+              <p style={{ fontSize: '14px', color: '#444', margin: 0, marginBottom: '8px', fontWeight: 600 }}>
+                {label.customer_phone}
+              </p>
+            ) : null}
             <p style={{ fontSize: '16px', color: '#333', margin: 0, marginBottom: '4px' }}>
               {label.building ?? ''}
             </p>
@@ -572,11 +589,25 @@ function LabelPreviewModal({ label, onClose, onDownload, isDownloading }: LabelP
                     fontSize: '14px',
                     fontWeight: 'bold',
                     display: 'inline-block',
-                    marginBottom: '8px',
+                    marginBottom: label.meal_name ? '4px' : '8px',
                   }}
                 >
                   {label.meal_type === 'executive' ? '🍛 Executive Meal' : '🥗 Salad Meal'}
                 </div>
+                {label.meal_name ? (
+                  <div
+                    style={{
+                      fontSize: '13px',
+                      color: '#333',
+                      fontWeight: 700,
+                      marginBottom: '8px',
+                      maxWidth: '220px',
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {label.meal_name}
+                  </div>
+                ) : null}
                 <div style={{ fontSize: '12px', color: '#666' }}>
                   {deliveryDateLabel} · Lunch delivery
                 </div>

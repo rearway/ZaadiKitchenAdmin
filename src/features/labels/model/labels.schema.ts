@@ -4,6 +4,8 @@ export const LabelSchema = z.object({
   label_id: z.string(),
   order_ref: z.string().optional(),
   customer_name: z.string(),
+  customer_phone: z.string().nullable().optional(),
+  meal_name: z.string().nullable().optional(),
   meal_type: z.string(),
   building: z.string().nullable().optional(),
   floor: z.string().nullable().optional(),
