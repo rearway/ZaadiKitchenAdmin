@@ -28,6 +28,10 @@ function formatLocation(label: Label) {
   return [label.building, label.floor, label.desk_area].filter(Boolean).join(' · ');
 }
 
+function formatAddressDetailLine(label: Label) {
+  return [label.floor, label.desk_area, label.gate].filter(Boolean).join(' · ');
+}
+
 type DatePickerFieldProps = {
   value: string;
   min: string;
@@ -573,9 +577,27 @@ function LabelPreviewModal({ label, onClose, onDownload, isDownloading }: LabelP
             <p style={{ fontSize: '15px', color: '#333', margin: 0, marginBottom: '2px', lineHeight: 1.25 }}>
               {label.building ?? ''}
             </p>
-            <p style={{ fontSize: '15px', color: '#333', margin: 0, marginBottom: '6px', lineHeight: 1.25 }}>
-              {[label.floor, label.desk_area, label.gate].filter(Boolean).join(' · ')}
-            </p>
+            {formatAddressDetailLine(label) ? (
+              <p style={{ fontSize: '15px', color: '#333', margin: 0, lineHeight: 1.25 }}>
+                {formatAddressDetailLine(label)}
+              </p>
+            ) : null}
+            {label.delivery_preference ? (
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: '#555',
+                  margin: 0,
+                  marginTop: '8px',
+                  marginBottom: '6px',
+                  lineHeight: 1.25,
+                }}
+              >
+                {label.delivery_preference}
+              </p>
+            ) : (
+              <div style={{ marginBottom: '6px' }} />
+            )}
             <p style={{ fontSize: '13px', color: '#666', margin: 0, marginBottom: '8px' }}>
               Riyadh, SA
             </p>
