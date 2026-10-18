@@ -111,6 +111,7 @@ export default function DailyOps() {
   }
 
   const { pipeline, meal_breakdown: mealBreakdown } = dailyOps;
+  const canExportDailyOps = mealBreakdown.total > 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -255,8 +256,12 @@ export default function DailyOps() {
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 className="btn-ghost"
-                style={{ padding: '8px 16px', border: '1px solid #333', opacity: exportDailyOps.isPending ? 0.7 : 1 }}
-                disabled={exportDailyOps.isPending}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #333',
+                  opacity: !canExportDailyOps || exportDailyOps.isPending ? 0.5 : 1,
+                }}
+                disabled={!canExportDailyOps || exportDailyOps.isPending}
                 onClick={() => exportDailyOps.mutate({ role })}
               >
                 {exportDailyOps.isPending ? 'Exporting…' : '📄 Export'}
