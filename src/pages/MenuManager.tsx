@@ -959,14 +959,21 @@ function AssignDishModal({
   onAssign: (meal: Meal) => void;
 }) {
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<MealTypeFilter>('all');
   const [selected, setSelected] = useState<Meal | null>(null);
   const debouncedSearch = useDebouncedValue(search.trim());
+  const streamType = slot.meal_type;
 
   const { data: meals = [], isLoading } = useAssignableMeals({
     q: debouncedSearch || undefined,
-    meal_type: typeFilter === 'all' ? undefined : typeFilter,
+    meal_type: streamType,
   });
+
+  const streamMeals = meals.filter((m) => m.meal_type === streamType);
+
+  useEffect(() => {
+    setSearch('');
+    setSelected(null);
+  }, [slot.id]);
 
   const handleSelect = (meal: Meal) => {
     setSelected(meal);
@@ -1018,7 +1025,7 @@ function AssignDishModal({
           Assign Dish
         </h2>
         <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '24px' }}>
-          {dayLabel} — choose from your active meal library
+          {dayLabel} — {streamType === 'executive' ? 'Executive' : 'Salad'} dishes only
         </p>
 
         <input
@@ -1028,28 +1035,6 @@ function AssignDishModal({
           onChange={(e) => setSearch(e.target.value)}
           style={{ width: '100%', marginBottom: '16px' }}
         />
-
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-          {([['all', 'All'], ['executive', '🍛 Exec'], ['salad', '🥗 Salad']] as [MealTypeFilter, string][]).map(
-            ([value, label]) => (
-              <button
-                key={value}
-                onClick={() => setTypeFilter(value)}
-                style={{
-                  backgroundColor: typeFilter === value ? '#333' : '#1A1A1A',
-                  color: typeFilter === value ? '#FFF' : '#9CA3AF',
-                  padding: '6px 16px',
-                  borderRadius: '20px',
-                  border: `1px solid ${typeFilter === value ? '#555' : '#333'}`,
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                }}
-              >
-                {label}
-              </button>
-            ),
-          )}
-        </div>
 
         {errorMessage && (
           <div
@@ -1084,12 +1069,13 @@ function AssignDishModal({
             paddingRight: '8px',
           }}
         >
-          {!isLoading && meals.length === 0 && (
+          {!isLoading && streamMeals.length === 0 && (
             <div style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF', fontSize: '14px' }}>
-              No active meals found. Activate a meal in the Meal Library to assign it.
+              No active {streamType === 'executive' ? 'executive' : 'salad'} meals found. Activate a meal in the
+              Meal Library to assign it.
             </div>
           )}
-          {meals.map((meal) => {
+          {streamMeals.map((meal) => {
             return (
               <div
                 key={meal.id}
