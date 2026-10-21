@@ -28,6 +28,10 @@ function formatLocation(label: Label) {
   return [label.building, label.floor, label.desk_area].filter(Boolean).join(' · ');
 }
 
+function formatAddressDetailLine(label: Label) {
+  return [label.floor, label.desk_area, label.gate].filter(Boolean).join(' · ');
+}
+
 type DatePickerFieldProps = {
   value: string;
   min: string;
@@ -363,10 +367,22 @@ export default function PrintLabels() {
                   </div>
 
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '24px' }}>
-                    <div style={{ width: '150px' }}>
+                    <div style={{ width: '160px' }}>
                       <h4 style={{ fontWeight: 600, fontSize: '15px', margin: 0 }}>{label.customer_name}</h4>
+                      {label.customer_phone ? (
+                        <p style={{ color: '#9CA3AF', fontSize: '13px', margin: '4px 0 0' }}>
+                          {label.customer_phone}
+                        </p>
+                      ) : null}
                     </div>
-                    <div style={{ color: '#9CA3AF', fontSize: '14px', flex: 1 }}>{formatLocation(label)}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {label.meal_name ? (
+                        <p style={{ color: '#E5E7EB', fontSize: '14px', margin: '0 0 4px', fontWeight: 500 }}>
+                          {label.meal_name}
+                        </p>
+                      ) : null}
+                      <div style={{ color: '#9CA3AF', fontSize: '14px' }}>{formatLocation(label)}</div>
+                    </div>
                     <div
                       style={{
                         backgroundColor: 'rgba(228,40,29,.10)',
@@ -528,29 +544,61 @@ function LabelPreviewModal({ label, onClose, onDownload, isDownloading }: LabelP
             style={{
               backgroundColor: '#1A1A1A',
               color: '#FFF',
-              padding: '16px',
+              padding: '10px 12px',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
+              flexShrink: 0,
             }}
           >
-            <img src="/brand/platio-logo-white.svg" alt="Platio" style={{ height: '18px', width: 'auto' }} />
-            <div style={{ fontSize: '12px', letterSpacing: '1px' }}>
+            <img src="/brand/platio-logo-white.svg" alt="Platio" style={{ height: '16px', width: 'auto' }} />
+            <div style={{ fontSize: '11px', letterSpacing: '0.5px' }}>
               KITCHEN · FRESH DAILY LUNCH
             </div>
           </div>
 
-          <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <h1 style={{ fontSize: '24px', fontWeight: 800, margin: 0, marginBottom: '8px' }}>
+          <div
+            style={{
+              padding: '12px 16px 10px',
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <h1 style={{ fontSize: '22px', fontWeight: 800, margin: 0, marginBottom: '2px', lineHeight: 1.15 }}>
               {label.customer_name}
             </h1>
-            <p style={{ fontSize: '16px', color: '#333', margin: 0, marginBottom: '4px' }}>
+            {label.customer_phone ? (
+              <p style={{ fontSize: '13px', color: '#444', margin: 0, marginBottom: '4px', fontWeight: 600 }}>
+                {label.customer_phone}
+              </p>
+            ) : null}
+            <p style={{ fontSize: '15px', color: '#333', margin: 0, marginBottom: '2px', lineHeight: 1.25 }}>
               {label.building ?? ''}
             </p>
-            <p style={{ fontSize: '16px', color: '#333', margin: 0, marginBottom: '16px' }}>
-              {[label.floor, label.desk_area, label.gate].filter(Boolean).join(' · ')}
-            </p>
-            <p style={{ fontSize: '14px', color: '#666', margin: 0, marginBottom: '24px' }}>
+            {formatAddressDetailLine(label) ? (
+              <p style={{ fontSize: '15px', color: '#333', margin: 0, lineHeight: 1.25 }}>
+                {formatAddressDetailLine(label)}
+              </p>
+            ) : null}
+            {label.delivery_preference ? (
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: '#555',
+                  margin: 0,
+                  marginTop: '18px',
+                  marginBottom: '6px',
+                  lineHeight: 1.25,
+                }}
+              >
+                {label.delivery_preference}
+              </p>
+            ) : (
+              <div style={{ marginBottom: '6px' }} />
+            )}
+            <p style={{ fontSize: '13px', color: '#666', margin: 0, marginBottom: '8px' }}>
               Riyadh, SA
             </p>
 
@@ -560,6 +608,7 @@ function LabelPreviewModal({ label, onClose, onDownload, isDownloading }: LabelP
                 justifyContent: 'space-between',
                 alignItems: 'flex-end',
                 marginTop: 'auto',
+                paddingTop: '4px',
               }}
             >
               <div>
@@ -572,22 +621,36 @@ function LabelPreviewModal({ label, onClose, onDownload, isDownloading }: LabelP
                     fontSize: '14px',
                     fontWeight: 'bold',
                     display: 'inline-block',
-                    marginBottom: '8px',
+                    marginBottom: label.meal_name ? '2px' : '4px',
                   }}
                 >
                   {label.meal_type === 'executive' ? '🍛 Executive Meal' : '🥗 Salad Meal'}
                 </div>
-                <div style={{ fontSize: '12px', color: '#666' }}>
+                {label.meal_name ? (
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      color: '#333',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      maxWidth: '220px',
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {label.meal_name}
+                  </div>
+                ) : null}
+                <div style={{ fontSize: '11px', color: '#666', lineHeight: 1.2 }}>
                   {deliveryDateLabel} · Lunch delivery
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
+                <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px' }}>
                   {label.order_ref ?? ''}
                 </div>
                 <div
                   style={{
-                    height: '32px',
+                    height: '28px',
                     width: '120px',
                     backgroundImage:
                       'repeating-linear-gradient(to right, #000, #000 2px, transparent 2px, transparent 4px, #000 4px, #000 5px, transparent 5px, transparent 8px)',

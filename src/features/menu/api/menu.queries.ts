@@ -1,4 +1,10 @@
-import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQuery,
+  useMutation,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 import { queryKeys } from '@/shared/lib/api/queryKeys';
 import {
   getWeeksApi,
@@ -7,6 +13,8 @@ import {
   getMealDetailApi,
   getAssignableMealsApi,
   assignSlotApi,
+  addDaySlotApi,
+  setDayDefaultApi,
   clearSlotApi,
   publishWeekApi,
   unpublishWeekApi,
@@ -23,9 +31,16 @@ import {
   type CreateMealInput,
   type GetMealsParams,
   type Meal,
+  type MealType,
   type UpdateMealInput,
-  type WeekDetail,
 } from '../model/menu.schema';
+
+function invalidateWeek(qc: QueryClient, weekId: string) {
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: queryKeys.menu.weekDetail(weekId) }),
+    qc.invalidateQueries({ queryKey: queryKeys.menu.weeks }),
+  ]);
+}
 
 export function useWeeks() {
   return useQuery({
@@ -70,41 +85,11 @@ export function useAssignSlot(weekId: string) {
   return useMutation({
     mutationFn: ({ slotId, meal }: { slotId: string; meal: Meal }) =>
       assignSlotApi(weekId, slotId, meal.id),
-    onSuccess: (res, { meal }) => {
-      qc.setQueryData<WeekDetail>(queryKeys.menu.weekDetail(weekId), (prev) => {
-        if (!prev) return prev;
-        const { filled_slots, total_slots, publish_ready } = res.week_fill_status;
-        const remaining = total_slots - filled_slots;
-        return {
-          ...prev,
-          publishReady: publish_ready,
-          publishBlockedReason: publish_ready
-            ? null
-            : remaining > 0
-              ? `${remaining} of ${total_slots} slots still empty`
-              : prev.publishBlockedReason,
-          slots: prev.slots.map((s) =>
-            s.id === res.slot_id
-              ? {
-                  ...s,
-                  is_filled: true,
-                  meal: {
-                    ...meal,
-                    name_en: res.meal.name_en || meal.name_en,
-                    meal_type: res.meal.meal_type ?? meal.meal_type,
-                    kcal: res.meal.kcal ?? meal.kcal,
-                    photo_url: res.meal.photo_url ?? meal.photo_url,
-                  },
-                }
-              : s,
-          ),
-        };
-      });
-    },
+    onSuccess: () => invalidateWeek(qc, weekId),
     onError: (err) => {
       const { kind } = classifyAssignError(err);
       if (kind === 'slot_not_editable' || kind === 'not_found') {
-        qc.invalidateQueries({ queryKey: queryKeys.menu.weeks });
+        invalidateWeek(qc, weekId);
       }
       if (kind === 'meal_is_draft') {
         qc.invalidateQueries({ queryKey: queryKeys.menu.meals });
@@ -113,11 +98,43 @@ export function useAssignSlot(weekId: string) {
   });
 }
 
+export function useAddDaySlot(weekId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      deliveryDate,
+      meal_type,
+      meal_id,
+    }: {
+      deliveryDate: string;
+      meal_type: MealType;
+      meal_id?: string;
+    }) => addDaySlotApi(weekId, deliveryDate, { meal_type, meal_id }),
+    onSuccess: () => invalidateWeek(qc, weekId),
+  });
+}
+
+export function useSetDayDefault(weekId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      deliveryDate,
+      meal_type,
+      meal_id,
+    }: {
+      deliveryDate: string;
+      meal_type: MealType;
+      meal_id: string;
+    }) => setDayDefaultApi(weekId, deliveryDate, { meal_type, meal_id }),
+    onSuccess: () => invalidateWeek(qc, weekId),
+  });
+}
+
 export function useClearSlot(weekId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (slotId: string) => clearSlotApi(weekId, slotId),
-    onSuccess: () => qc.refetchQueries({ queryKey: queryKeys.menu.weekDetail(weekId) }),
+    onSuccess: () => invalidateWeek(qc, weekId),
   });
 }
 
