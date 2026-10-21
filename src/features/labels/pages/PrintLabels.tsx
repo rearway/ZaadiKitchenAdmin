@@ -588,7 +588,7 @@ function LabelPreviewModal({ label, onClose, onDownload, isDownloading }: LabelP
                   fontSize: '13px',
                   color: '#555',
                   margin: 0,
-                  marginTop: '8px',
+                  marginTop: '18px',
                   marginBottom: '6px',
                   lineHeight: 1.25,
                 }}
