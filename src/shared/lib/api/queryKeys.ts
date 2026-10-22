@@ -35,4 +35,7 @@ export const queryKeys = {
     automations: ['comms', 'automations'] as const,
     broadcastSegments: ['comms', 'broadcastSegments'] as const,
   },
+  plans: {
+    all: ['plans'] as const,
+  },
 } as const;

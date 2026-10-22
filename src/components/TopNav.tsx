@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useSessionStore } from '@/store/useSessionStore';
 import { logoutApi } from '@/features/auth/api/auth.api';
 import type { User } from '@/shared/types/api';
@@ -25,6 +25,12 @@ export default function TopNav({ user }: Props) {
   const isAdmin = user?.role === 'admin';
   const initial = user?.name?.charAt(0).toUpperCase() ?? (isAdmin ? 'A' : 'O');
 
+  const opsLinks = [
+    { label: 'Daily Ops', path: '/ops' },
+    { label: 'Labels', path: '/labels' },
+    { label: 'Plans & Pricing', path: '/plans' },
+  ];
+
   return (
     <header
       style={{
@@ -42,19 +48,40 @@ export default function TopNav({ user }: Props) {
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         {!isAdmin && (
-          <h2
-            style={{
-              fontSize: '24px',
-              fontFamily: 'Montserrat, sans-serif',
-              margin: 0,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            <img src="/brand/platio-logo-white.svg" alt="Platio" style={{ height: '20px', width: 'auto' }} />
-            Ops
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <h2
+              style={{
+                fontSize: '24px',
+                fontFamily: 'Montserrat, sans-serif',
+                margin: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <img src="/brand/platio-logo-white.svg" alt="Platio" style={{ height: '20px', width: 'auto' }} />
+              Ops
+            </h2>
+            <nav style={{ display: 'flex', gap: '8px' }}>
+              {opsLinks.map((link) => (
+                <NavLink
+                  key={link.path}
+                  to={link.path}
+                  style={({ isActive }) => ({
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                    fontSize: '13px',
+                    fontWeight: isActive ? 600 : 500,
+                    color: isActive ? '#FFF' : '#9CA3AF',
+                    backgroundColor: isActive ? 'rgba(228,40,29,.10)' : 'transparent',
+                  })}
+                >
+                  {link.label}
+                </NavLink>
+              ))}
+            </nav>
+          </div>
         )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
