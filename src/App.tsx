@@ -12,6 +12,7 @@ import PrintLabels from './features/labels/pages/PrintLabels';
 import AddDish from './pages/AddDish';
 import AddArea from './pages/AddArea';
 import BuildingManagement from './pages/BuildingManagement';
+import { PlansPricing } from '@/features/plans';
 import ProtectedRoute from './app/router/ProtectedRoute';
 import RoleRoute from './app/router/RoleRoute';
 
@@ -39,6 +40,7 @@ export default function App() {
             {/* Admin + Ops */}
             <Route path="/ops" element={<DailyOps />} />
             <Route path="/labels" element={<PrintLabels />} />
+            <Route path="/plans" element={<PlansPricing />} />
           </Route>
         </Route>
 

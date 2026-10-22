@@ -7,24 +7,29 @@ import {
   Users,
   MessageSquare,
   Map,
+  BadgePercent,
   LogOut,
 } from 'lucide-react';
 import { logoutApi } from '@/features/auth/api/auth.api';
 import { useSessionStore } from '@/store/useSessionStore';
+import { canAccess } from '@/shared/config/permissions';
 
 const NAV_ITEMS = [
-  { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { label: 'Daily Ops', path: '/ops', icon: Activity },
-  { label: 'Revenue', path: '/revenue', icon: BarChart3 },
-  { label: 'Menu Manager', path: '/menu', icon: Calendar },
-  { label: 'Customers', path: '/customers', icon: Users },
-  { label: 'Comms', path: '/comms', icon: MessageSquare },
-  { label: 'Areas & Buildings', path: '/areas', icon: Map },
+  { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, feature: 'dashboard' },
+  { label: 'Daily Ops', path: '/ops', icon: Activity, feature: 'ops' },
+  { label: 'Revenue', path: '/revenue', icon: BarChart3, feature: 'revenue' },
+  { label: 'Menu Manager', path: '/menu', icon: Calendar, feature: 'menu' },
+  { label: 'Customers', path: '/customers', icon: Users, feature: 'customers' },
+  { label: 'Comms', path: '/comms', icon: MessageSquare, feature: 'comms' },
+  { label: 'Areas & Buildings', path: '/areas', icon: Map, feature: 'areas' },
+  { label: 'Plans & Pricing', path: '/plans', icon: BadgePercent, feature: 'plans' },
 ];
 
 export default function Sidebar() {
   const navigate = useNavigate();
   const clearSession = useSessionStore((s) => s.clearSession);
+  const role = useSessionStore((s) => s.user?.role ?? 'ops');
+  const visibleNav = NAV_ITEMS.filter((item) => canAccess(role, item.feature));
 
   const handleLogout = async () => {
     try {
@@ -72,7 +77,7 @@ export default function Sidebar() {
           gap: '8px',
         }}
       >
-        {NAV_ITEMS.map((item) => (
+        {visibleNav.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
