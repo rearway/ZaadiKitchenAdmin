@@ -2,6 +2,12 @@ import { z } from 'zod';
 import { client } from '@/shared/lib/api/client';
 import { unwrap } from '@/shared/types/api';
 import {
+  MealRatingsResponseSchema,
+  MEAL_RATINGS_MAX_PAGE_SIZE,
+  MEAL_RATINGS_PAGE_SIZE,
+  type GetMealRatingsParams,
+} from '../model/meal-ratings.schema';
+import {
   WeekSchema,
   WeekDetailApiSchema,
   MealSchema,
@@ -82,6 +88,18 @@ export async function getMealDetailApi(mealId: string): Promise<MealDetail> {
   const res = await client.get(`/admin/meals/${mealId}`);
   const payload = unwrap(res.data, z.unknown());
   return parseMealDetail(payload);
+}
+
+export async function getMealRatingsApi(mealId: string, params: GetMealRatingsParams = {}) {
+  const page = params.page ?? 1;
+  const perPage = Math.min(
+    MEAL_RATINGS_MAX_PAGE_SIZE,
+    Math.max(1, params.perPage ?? MEAL_RATINGS_PAGE_SIZE)
+  );
+  const res = await client.get(`/admin/meals/${mealId}/ratings`, {
+    params: { page, per_page: perPage },
+  });
+  return unwrap(res.data, MealRatingsResponseSchema);
 }
 
 /** Week planner picker: active + updated meals (live version), via context=picker. */

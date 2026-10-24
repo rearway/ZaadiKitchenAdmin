@@ -17,6 +17,7 @@ import {
   useUpdateMealStatus,
   usePhotoUpload,
 } from '@/features/menu/api/menu.queries';
+import MealRatingsPanel from '@/features/menu/components/MealRatingsPanel';
 import WeekPlannerDay from '@/features/menu/components/WeekPlannerDay';
 import type {
   Meal,
@@ -1388,6 +1389,8 @@ function EditMealModal({
         {detailLoading && (
           <p style={{ color: '#9CA3AF', fontSize: '14px', margin: 0 }}>Loading meal…</p>
         )}
+
+        <MealRatingsPanel key={mealId} mealId={mealId} />
 
         {detail && detail.status === 'updated' && (
           <div
