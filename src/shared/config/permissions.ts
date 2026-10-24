@@ -1,7 +1,18 @@
 import type { Role } from './roles';
 
 const ALLOWED: Record<Role, string[]> = {
-  admin: ['dashboard', 'ops', 'labels', 'revenue', 'menu', 'customers', 'comms', 'areas', 'plans'],
+  admin: [
+    'dashboard',
+    'ops',
+    'labels',
+    'revenue',
+    'menu',
+    'customers',
+    'comms',
+    'areas',
+    'plans',
+    'drivers',
+  ],
   ops: ['ops', 'labels', 'plans'],
 };
 

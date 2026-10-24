@@ -45,4 +45,8 @@ export const queryKeys = {
   plans: {
     all: ['plans'] as const,
   },
+  drivers: {
+    all: ['drivers'] as const,
+    detail: (driverId: string) => ['drivers', driverId] as const,
+  },
 } as const;
