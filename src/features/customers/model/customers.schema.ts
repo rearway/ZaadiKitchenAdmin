@@ -27,16 +27,19 @@ export const CustomerSchema = z
   .transform((c) => {
     const rawStatus = c.subscriptionStatus ?? c.subscription_status ?? c.status ?? 'active';
     const endDate = c.endDate ?? c.end_date ?? null;
-    const daysLeft = c.daysLeft ?? c.days_left ?? (() => {
-      if (!endDate) return 0;
-      return Math.max(0, Math.ceil((new Date(endDate).getTime() - Date.now()) / 86_400_000));
-    })();
+    const daysLeft =
+      c.daysLeft ??
+      c.days_left ??
+      (() => {
+        if (!endDate) return 0;
+        return Math.max(0, Math.ceil((new Date(endDate).getTime() - Date.now()) / 86_400_000));
+      })();
     return {
       id: c.id,
       name: c.name ?? c.fullName ?? '',
       phone: c.phone ?? '',
       email: c.email ?? '',
-      subscriptionStatus: ((rawStatus ?? 'active').toLowerCase()) as SubscriptionStatus,
+      subscriptionStatus: (rawStatus ?? 'active').toLowerCase() as SubscriptionStatus,
       plan: c.plan ?? c.planName ?? c.plan_name ?? '',
       endDate,
       daysLeft,
@@ -112,7 +115,7 @@ export const CustomerDetailSchema = z
       name: c.name ?? c.fullName ?? '',
       phone: c.phone ?? '',
       email: c.email ?? '',
-      subscriptionStatus: ((rawStatus ?? 'active').toLowerCase()) as SubscriptionStatus,
+      subscriptionStatus: (rawStatus ?? 'active').toLowerCase() as SubscriptionStatus,
       plan: c.plan ?? c.planName ?? c.plan_name ?? '',
       planEndDate: c.planEndDate ?? c.plan_end_date ?? c.endDate ?? c.end_date ?? null,
       walletBalance: c.walletBalance ?? c.wallet_balance ?? 0,
@@ -160,26 +163,149 @@ export const DeliveryRecordSchema = z
   }));
 export type DeliveryRecord = z.infer<typeof DeliveryRecordSchema>;
 
+const OptionalTextSchema = z.string().nullable().optional();
+
+/** Live history sends SAR as a number; accept a numeric string without failing the row. */
+const OptionalSarSchema = z
+  .union([
+    z.number(),
+    z.null(),
+    z.string().transform((value) => {
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+      const amount = Number(trimmed);
+      return Number.isFinite(amount) ? amount : null;
+    }),
+  ])
+  .optional();
+
+function emptyToNull(value: string | null | undefined): string | null {
+  const trimmed = value?.trim() ?? '';
+  return trimmed ? trimmed : null;
+}
+
 export const IssueRecordSchema = z
   .object({
-    id: z.string().optional(),
-    type: z.string().optional(),
-    description: z.string().optional(),
-    status: z.string().optional(),
-    createdAt: z.string().optional(),
-    created_at: z.string().optional(),
-    resolvedAt: z.string().optional().nullable(),
-    resolved_at: z.string().optional().nullable(),
+    id: z.string().nullable().optional(),
+    issueType: OptionalTextSchema,
+    issue_type: OptionalTextSchema,
+    type: OptionalTextSchema,
+    deliveryDate: OptionalTextSchema,
+    delivery_date: OptionalTextSchema,
+    creditedAmountSar: OptionalSarSchema,
+    credited_amount_sar: OptionalSarSchema,
+    rejectionReason: OptionalTextSchema,
+    rejection_reason: OptionalTextSchema,
+    rejectionNotes: OptionalTextSchema,
+    rejection_notes: OptionalTextSchema,
+    description: OptionalTextSchema,
+    status: OptionalTextSchema,
+    createdAt: OptionalTextSchema,
+    created_at: OptionalTextSchema,
+    resolvedAt: OptionalTextSchema,
+    resolved_at: OptionalTextSchema,
   })
-  .transform((i) => ({
-    id: i.id ?? '',
-    type: i.type ?? '',
-    description: i.description ?? '',
-    status: i.status ?? '',
-    createdAt: i.createdAt ?? i.created_at ?? '',
-    resolvedAt: i.resolvedAt ?? i.resolved_at ?? null,
+  .transform((issue) => ({
+    id: issue.id ?? '',
+    issueType: (issue.issueType ?? issue.issue_type ?? issue.type ?? '').trim(),
+    deliveryDate: (issue.deliveryDate ?? issue.delivery_date ?? '').trim(),
+    creditedAmountSar: issue.creditedAmountSar ?? issue.credited_amount_sar ?? null,
+    rejectionReason: emptyToNull(issue.rejectionReason ?? issue.rejection_reason),
+    rejectionNotes: emptyToNull(issue.rejectionNotes ?? issue.rejection_notes),
+    description: (issue.description ?? '').trim(),
+    status: (issue.status ?? '').trim(),
+    createdAt: (issue.createdAt ?? issue.created_at ?? '').trim(),
+    resolvedAt: emptyToNull(issue.resolvedAt ?? issue.resolved_at),
   }));
 export type IssueRecord = z.infer<typeof IssueRecordSchema>;
+
+const ISSUE_HISTORY_TYPE_LABEL: Record<string, string> = {
+  wrong_order: 'Wrong order',
+  quality_issue: 'Quality issue',
+  not_delivered: 'Not delivered',
+  damaged: 'Damaged',
+};
+
+const ISSUE_HISTORY_STATUS_LABEL: Record<string, string> = {
+  open: 'Open',
+  credited: 'Credited',
+  rejected: 'Rejected',
+};
+
+const RESOLVED_ISSUE_STATUSES = new Set(['credited', 'rejected']);
+
+const historyDeliveryDateFormat = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+const historyCreatedAtFormat = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  timeZone: 'Asia/Riyadh',
+});
+
+function humanizeToken(value: string): string {
+  return value.replace(/[_-]+/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+export function issueHistoryTypeLabel(issueType: string): string {
+  const key = issueType.trim().toLowerCase();
+  if (!key) return 'Issue';
+  return ISSUE_HISTORY_TYPE_LABEL[key] ?? humanizeToken(key);
+}
+
+export function issueHistoryStatusLabel(status: string): string {
+  const key = status.trim().toLowerCase();
+  if (!key) return '';
+  return ISSUE_HISTORY_STATUS_LABEL[key] ?? humanizeToken(key);
+}
+
+/** Open rows must not be labeled as resolved. */
+export function issueHistorySectionTitle(issues: IssueRecord[]): string {
+  const allResolved =
+    issues.length > 0 &&
+    issues.every((issue) => RESOLVED_ISSUE_STATUSES.has(issue.status.trim().toLowerCase()));
+  return allResolved ? 'Resolved Issues' : 'Issues';
+}
+
+export function formatHistorySar(amount: number): string {
+  return `SAR ${amount.toLocaleString('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+/** Credit amount when one was applied; otherwise the rejection reason or notes. */
+export function issueHistoryOutcome(issue: IssueRecord): string | null {
+  if (issue.creditedAmountSar != null) return formatHistorySar(issue.creditedAmountSar);
+  return issue.rejectionReason ?? issue.rejectionNotes;
+}
+
+/** Calendar date from `YYYY-MM-DD`. Empty stays empty so the row can omit it. */
+export function formatHistoryDeliveryDate(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed);
+  if (!match) return trimmed;
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  if (Number.isNaN(date.getTime())) return trimmed;
+  return historyDeliveryDateFormat.format(date);
+}
+
+/** Timestamp in Asia/Riyadh. Empty stays empty so the row can omit it. */
+export function formatHistoryCreatedAt(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  const date = new Date(trimmed);
+  if (Number.isNaN(date.getTime())) return trimmed;
+  return historyCreatedAtFormat.format(date).replace(/\u202f/g, ' ');
+}
 
 export const CustomerHistorySchema = z
   .object({
@@ -196,10 +322,7 @@ export const CustomerHistorySchema = z
 export type CustomerHistory = z.infer<typeof CustomerHistorySchema>;
 
 export const CreditWalletInputSchema = z.object({
-  amountSar: z
-    .number()
-    .positive('Amount must be positive')
-    .max(30, 'Maximum credit is SAR 30'),
+  amountSar: z.number().positive('Amount must be positive').max(30, 'Maximum credit is SAR 30'),
   note: z.string().min(1, 'Note is required'),
 });
 export type CreditWalletInput = z.infer<typeof CreditWalletInputSchema>;
@@ -211,15 +334,13 @@ export const SUBSCRIPTION_STATUS_LABEL: Record<SubscriptionStatus, string> = {
   churned: 'Churned',
 };
 
-export const SUBSCRIPTION_STATUS_COLOR: Record<
-  SubscriptionStatus,
-  { bg: string; color: string }
-> = {
-  active: { bg: 'rgba(228,40,29,0.10)', color: 'var(--danger)' },
-  paused: { bg: 'rgba(139,92,246,0.1)', color: 'var(--ops)' },
-  expired: { bg: 'rgba(255,115,64,0.1)', color: 'var(--danger)' },
-  churned: { bg: 'rgba(107,114,128,0.1)', color: '#9CA3AF' },
-};
+export const SUBSCRIPTION_STATUS_COLOR: Record<SubscriptionStatus, { bg: string; color: string }> =
+  {
+    active: { bg: 'rgba(228,40,29,0.10)', color: 'var(--danger)' },
+    paused: { bg: 'rgba(139,92,246,0.1)', color: 'var(--ops)' },
+    expired: { bg: 'rgba(255,115,64,0.1)', color: 'var(--danger)' },
+    churned: { bg: 'rgba(107,114,128,0.1)', color: '#9CA3AF' },
+  };
 
 export const SUBSCRIPTION_STATUS_AVATAR: Record<SubscriptionStatus, string> = {
   active: 'var(--ops)',
