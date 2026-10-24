@@ -1,4 +1,5 @@
 import { REJECT_REASONS, type Issue } from '../model/daily-ops.schema';
+import IssueSubject from './IssueSubject';
 import ModalOverlay from './ModalOverlay';
 
 type RejectModalProps = {
@@ -31,8 +32,8 @@ export default function RejectModal({
         Reject Issue
       </h2>
       <p style={{ color: '#9CA3AF', fontSize: '14px', lineHeight: '1.5', marginBottom: '24px' }}>
-        Issue: {issue.issue_type_label} — {issue.customer_name}. Select a reason. This closes the
-        issue without crediting the customer's wallet.
+        Issue: <IssueSubject issue={issue} />. Select a reason. This closes the issue without
+        crediting the customer's wallet.
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
