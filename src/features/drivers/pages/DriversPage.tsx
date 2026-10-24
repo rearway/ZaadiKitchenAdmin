@@ -7,17 +7,19 @@ import DriverFormSheet from '../components/DriverFormSheet';
 import {
   useCreateDriver,
   useDeleteDriver,
+  useDriver,
   useDrivers,
   useUpdateDriver,
 } from '../api/drivers.queries';
 import {
   driverAreaLabels,
-  driverLanguageLabel,
+  filterDrivers,
+  type CreateDriverInput,
   type Driver,
-  type DriverWriteInput,
+  type UpdateDriverInput,
 } from '../model/drivers.schema';
 
-type Editor = { mode: 'create' } | { mode: 'edit'; driver: Driver };
+const DRIVER_COLUMNS = 'minmax(180px, 1.4fr) minmax(160px, 1fr) minmax(180px, 1.8fr) 110px 150px';
 
 function messageFrom(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
@@ -26,23 +28,15 @@ function messageFrom(err: unknown, fallback: string): string {
 export default function DriversPage() {
   const [query, setQuery] = useState('');
   const debouncedQ = useDebouncedValue(query, 400);
-  const [page, setPage] = useState(1);
-  const [trackedQ, setTrackedQ] = useState(debouncedQ);
-  if (trackedQ !== debouncedQ) {
-    setTrackedQ(debouncedQ);
-    setPage(1);
-  }
-
-  const [editor, setEditor] = useState<Editor | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Driver | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const list = useDrivers({
-    q: debouncedQ.trim() || undefined,
-    page,
-  });
+  const list = useDrivers();
+  const detail = useDriver(editingId);
   const areasQuery = useAreas();
   const createDriver = useCreateDriver();
   const updateDriver = useUpdateDriver();
@@ -55,28 +49,39 @@ export default function DriversPage() {
   );
 
   const drivers = list.data?.drivers ?? [];
-  const total = list.data?.total ?? 0;
-  const totalPages = list.data?.totalPages ?? 1;
+  const visibleDrivers = useMemo(
+    () => filterDrivers(list.data?.drivers ?? [], debouncedQ),
+    [list.data, debouncedQ]
+  );
   const isSaving = createDriver.isPending || updateDriver.isPending;
 
-  const handleSubmit = (input: DriverWriteInput) => {
-    if (!editor) return;
+  const closeEditor = () => {
+    if (isSaving) return;
+    setCreating(false);
+    setEditingId(null);
+    setFormError(null);
+  };
+
+  const handleSubmit = (input: CreateDriverInput | UpdateDriverInput) => {
     setErrorMsg(null);
     setFormError(null);
     const onSuccess = () => {
-      setSuccessMsg(
-        editor.mode === 'create' ? `${input.full_name} added.` : `${input.full_name} updated.`
-      );
-      setEditor(null);
+      setSuccessMsg(creating ? `${input.full_name} added.` : `${input.full_name} updated.`);
+      setCreating(false);
+      setEditingId(null);
     };
     const onError = (err: unknown) => {
       setFormError(messageFrom(err, 'Failed to save driver.'));
     };
-    if (editor.mode === 'create') {
-      createDriver.mutate(input, { onSuccess, onError });
+    if (creating) {
+      createDriver.mutate(
+        { full_name: input.full_name, phone: input.phone, area_ids: input.area_ids },
+        { onSuccess, onError }
+      );
       return;
     }
-    updateDriver.mutate({ id: editor.driver.id, input }, { onSuccess, onError });
+    if (!editingId || !('is_active' in input)) return;
+    updateDriver.mutate({ driverId: editingId, input }, { onSuccess, onError });
   };
 
   const handleDelete = () => {
@@ -85,9 +90,8 @@ export default function DriversPage() {
     const name = deleteTarget.fullName || deleteTarget.phone;
     deleteDriver.mutate(deleteTarget.id, {
       onSuccess: () => {
-        setSuccessMsg(`${name} deleted.`);
+        setSuccessMsg(`${name} removed.`);
         setDeleteTarget(null);
-        if (drivers.length === 1 && page > 1) setPage(page - 1);
       },
       onError: (err) => {
         setDeleteTarget(null);
@@ -110,10 +114,10 @@ export default function DriversPage() {
         <div>
           <h1 style={{ fontSize: 'var(--text-32)', fontFamily: 'var(--font-brand)', margin: 0 }}>
             Drivers
-            {!list.isLoading && total > 0 && (
+            {!list.isLoading && drivers.length > 0 && (
               <span style={{ color: 'var(--soft)', fontSize: 'var(--text-20)' }}>
                 {' '}
-                · {total} total
+                · {drivers.length} total
               </span>
             )}
           </h1>
@@ -133,7 +137,8 @@ export default function DriversPage() {
           onClick={() => {
             setErrorMsg(null);
             setFormError(null);
-            setEditor({ mode: 'create' });
+            setEditingId(null);
+            setCreating(true);
           }}
         >
           + Add driver
@@ -174,7 +179,7 @@ export default function DriversPage() {
         </div>
       )}
 
-      {!list.isLoading && !list.isError && drivers.length === 0 && (
+      {!list.isLoading && !list.isError && visibleDrivers.length === 0 && (
         <div
           style={{
             padding: 'var(--space-32)',
@@ -190,7 +195,7 @@ export default function DriversPage() {
         </div>
       )}
 
-      {!list.isLoading && !list.isError && drivers.length > 0 && (
+      {!list.isLoading && !list.isError && visibleDrivers.length > 0 && (
         <div
           style={{
             backgroundColor: 'var(--blk3)',
@@ -202,8 +207,7 @@ export default function DriversPage() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns:
-                'minmax(160px, 1.3fr) minmax(150px, 1fr) minmax(180px, 1.6fr) 110px 100px 150px',
+              gridTemplateColumns: DRIVER_COLUMNS,
               gap: 'var(--space-12)',
               padding: 'var(--space-12) var(--space-20)',
               borderBottom: '1px solid var(--border-ui)',
@@ -211,17 +215,16 @@ export default function DriversPage() {
               color: 'var(--soft)',
               letterSpacing: '0.5px',
               textTransform: 'uppercase',
-              minWidth: '820px',
+              minWidth: '760px',
             }}
           >
             <span>Driver</span>
             <span>Phone</span>
             <span>Areas</span>
-            <span>Language</span>
             <span>Status</span>
             <span />
           </div>
-          {drivers.map((driver) => (
+          {visibleDrivers.map((driver) => (
             <DriverRow
               key={driver.id}
               driver={driver}
@@ -229,7 +232,8 @@ export default function DriversPage() {
               onEdit={() => {
                 setErrorMsg(null);
                 setFormError(null);
-                setEditor({ mode: 'edit', driver });
+                setCreating(false);
+                setEditingId(driver.id);
               }}
               onDelete={() => {
                 setErrorMsg(null);
@@ -240,47 +244,10 @@ export default function DriversPage() {
         </div>
       )}
 
-      {!list.isError && totalPages > 1 && (
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: 'var(--space-12)',
-            alignItems: 'center',
-          }}
-        >
-          <button
-            type="button"
-            className="btn-ghost"
-            style={{ padding: 'var(--space-6) var(--space-16)', opacity: page <= 1 ? 0.4 : 1 }}
-            disabled={page <= 1}
-            onClick={() => setPage((current) => Math.max(1, current - 1))}
-          >
-            ← Prev
-          </button>
-          <span style={{ fontSize: 'var(--text-14)', color: 'var(--soft)' }}>
-            Page {page} of {totalPages}
-          </span>
-          <button
-            type="button"
-            className="btn-ghost"
-            style={{
-              padding: 'var(--space-6) var(--space-16)',
-              opacity: page >= totalPages ? 0.4 : 1,
-            }}
-            disabled={page >= totalPages}
-            onClick={() => setPage((current) => current + 1)}
-          >
-            Next →
-          </button>
-        </div>
-      )}
-
-      {editor && (
+      {creating && (
         <DriverFormSheet
-          key={editor.mode === 'edit' ? editor.driver.id : 'create'}
-          mode={editor.mode}
-          driver={editor.mode === 'edit' ? editor.driver : null}
+          mode="create"
+          driver={null}
           areas={areas}
           areasLoading={areasQuery.isLoading}
           areasError={
@@ -288,9 +255,33 @@ export default function DriversPage() {
           }
           serverError={formError}
           isPending={isSaving}
-          onClose={() => {
-            if (!isSaving) setEditor(null);
-          }}
+          onClose={closeEditor}
+          onSubmit={handleSubmit}
+        />
+      )}
+
+      {editingId && !detail.data && detail.isLoading && (
+        <FetchNotice message="Loading driver…" onClose={closeEditor} />
+      )}
+      {editingId && !detail.data && detail.isError && (
+        <FetchNotice
+          message={messageFrom(detail.error, 'Failed to load driver.')}
+          onClose={closeEditor}
+        />
+      )}
+      {editingId && detail.data && (
+        <DriverFormSheet
+          key={detail.data.id}
+          mode="edit"
+          driver={detail.data}
+          areas={areas}
+          areasLoading={areasQuery.isLoading}
+          areasError={
+            areasQuery.isError ? messageFrom(areasQuery.error, 'Failed to load areas.') : null
+          }
+          serverError={formError}
+          isPending={isSaving}
+          onClose={closeEditor}
           onSubmit={handleSubmit}
         />
       )}
@@ -324,24 +315,22 @@ function DriverRow({
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns:
-          'minmax(160px, 1.3fr) minmax(150px, 1fr) minmax(180px, 1.6fr) 110px 100px 150px',
+        gridTemplateColumns: DRIVER_COLUMNS,
         gap: 'var(--space-12)',
         padding: 'var(--space-16) var(--space-20)',
         borderBottom: '1px solid var(--surface)',
         alignItems: 'center',
         fontSize: 'var(--text-14)',
-        minWidth: '820px',
+        minWidth: '760px',
       }}
     >
       <div style={{ fontWeight: 600, color: 'var(--white)' }}>{driver.fullName || '—'}</div>
       <span dir="ltr" style={{ color: 'var(--text-3)' }}>
-        {driver.phone}
+        {driver.phone || '—'}
       </span>
       <span style={{ color: areaLabels.length ? 'var(--text-3)' : 'var(--mid)' }}>
         {areaLabels.length ? areaLabels.join(', ') : 'Unassigned'}
       </span>
-      <span>{driverLanguageLabel(driver.language)}</span>
       <span
         style={{
           color: driver.isActive ? 'var(--grn)' : 'var(--mid)',
@@ -376,6 +365,45 @@ function DriverRow({
           onClick={onDelete}
         >
           Delete
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function FetchNotice({ message, onClose }: { message: string; onClose: () => void }) {
+  return (
+    <div
+      role="presentation"
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+        zIndex: 100,
+      }}
+    >
+      <div
+        role="status"
+        onClick={(event) => event.stopPropagation()}
+        style={{
+          backgroundColor: 'var(--blk3)',
+          width: '100%',
+          maxWidth: '600px',
+          borderRadius: 'var(--radius-24) var(--radius-24) 0 0',
+          borderTop: '1px solid var(--border-ui)',
+          padding: 'var(--space-32)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-16)',
+        }}
+      >
+        <p style={{ margin: 0, color: 'var(--soft)', fontSize: 'var(--text-14)' }}>{message}</p>
+        <button type="button" className="btn-ghost" onClick={onClose}>
+          Close
         </button>
       </div>
     </div>

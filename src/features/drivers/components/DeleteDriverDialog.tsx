@@ -64,7 +64,8 @@ export default function DeleteDriverDialog({ driver, isPending, onCancel, onConf
           id="delete-driver-body"
           style={{ margin: 0, fontSize: 'var(--text-14)', color: 'var(--soft)', lineHeight: 1.5 }}
         >
-          They will no longer be able to sign in to the rider app. This cannot be undone.
+          They will be signed out and removed from this list. Their phone can be used again.
+          Delivery issue history is kept.
         </p>
         <div style={{ display: 'flex', gap: 'var(--space-12)', justifyContent: 'flex-end' }}>
           <button

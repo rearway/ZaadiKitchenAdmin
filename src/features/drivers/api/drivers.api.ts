@@ -3,54 +3,44 @@ import { unwrap } from '@/shared/types/api';
 import {
   DriverListSchema,
   DriverResponseSchema,
-  type DriverWriteInput,
+  type CreateDriverInput,
+  type UpdateDriverInput,
 } from '../model/drivers.schema';
 
 /**
- * Admin driver CRUD. Not implemented on ZaadiKitchenBackend `dev` yet
- * (DRIVER users are still pre-created in the database). Paths follow
- * `/admin/areas` and `/admin/customers`: JWT bearer, `{ message?, data }` envelope.
+ * Admin drivers from ZaadiKitchenBackend PR #18. ADMIN JWT.
+ * Staging needs the `driver_area_assignments` migration before these succeed.
  *
- * GET    /admin/drivers?q=&page=&per_page=
- * POST   /admin/drivers
- * PATCH  /admin/drivers/:id
- * DELETE /admin/drivers/:id
+ * GET    /admin/drivers
+ * GET    /admin/drivers/:driver_id
+ * POST   /admin/drivers                 { full_name, phone, area_ids }
+ * PATCH  /admin/drivers/:driver_id      { full_name?, phone?, is_active?, area_ids? }
+ * DELETE /admin/drivers/:driver_id      soft-delete
  *
- * Write body: `{ full_name, phone, language_preference, is_active, area_ids }`.
- * `area_ids` is the full assignment set (multi-area). An empty array clears areas.
+ * Sending `area_ids` replaces the whole assignment. [] clears it.
+ * Create rejects any field other than full_name, phone, and area_ids.
  */
 
-export const DRIVERS_PAGE_SIZE = 20;
-
-export type GetDriversParams = {
-  q?: string;
-  page?: number;
-  perPage?: number;
-};
-
-export async function getDriversApi(params: GetDriversParams = {}) {
-  const page = params.page ?? 1;
-  const perPage = params.perPage ?? DRIVERS_PAGE_SIZE;
-  const res = await client.get('/admin/drivers', {
-    params: {
-      q: params.q || undefined,
-      page,
-      per_page: perPage,
-    },
-  });
+export async function getDriversApi() {
+  const res = await client.get('/admin/drivers');
   return unwrap(res.data, DriverListSchema);
 }
 
-export async function createDriverApi(input: DriverWriteInput) {
+export async function getDriverApi(driverId: string) {
+  const res = await client.get(`/admin/drivers/${driverId}`);
+  return unwrap(res.data, DriverResponseSchema);
+}
+
+export async function createDriverApi(input: CreateDriverInput) {
   const res = await client.post('/admin/drivers', input);
   return unwrap(res.data, DriverResponseSchema);
 }
 
-export async function updateDriverApi(id: string, input: DriverWriteInput) {
-  const res = await client.patch(`/admin/drivers/${id}`, input);
+export async function updateDriverApi(driverId: string, input: UpdateDriverInput) {
+  const res = await client.patch(`/admin/drivers/${driverId}`, input);
   return unwrap(res.data, DriverResponseSchema);
 }
 
-export async function deleteDriverApi(id: string) {
-  await client.delete(`/admin/drivers/${id}`);
+export async function deleteDriverApi(driverId: string) {
+  await client.delete(`/admin/drivers/${driverId}`);
 }

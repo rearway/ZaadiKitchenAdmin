@@ -2,132 +2,120 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { canAccess } from '../src/shared/config/permissions.ts';
 import {
+  CreateDriverSchema,
   DriverListSchema,
   DriverResponseSchema,
-  DriverSchema,
-  DriverWriteSchema,
-  driverAreaLabels,
+  UpdateDriverSchema,
+  filterDrivers,
   normalizeDriverPhone,
 } from '../src/features/drivers/model/drivers.schema.ts';
 
-const snakeDriver = {
+const AREA_A = '11111111-1111-4111-8111-111111111111';
+const AREA_B = '22222222-2222-4222-8222-222222222222';
+
+const documentedDriver = {
   id: 'drv-1',
-  full_name: 'Khalid Al Harbi',
+  fullName: 'Faisal Al-Harbi',
   phone: '+966512345678',
-  language_preference: 'AR',
-  is_active: true,
-  areas: [{ id: 'area-1', name: 'Al Nakheel' }],
-  created_at: '2026-10-24T00:00:00.000Z',
+  role: 'DRIVER',
+  isActive: true,
+  areas: [{ id: AREA_A, name: 'Al Nakheel' }],
+  createdAt: '2026-10-24T12:00:00.000Z',
+  updatedAt: '2026-10-24T12:00:00.000Z',
 };
 
-describe('DriverSchema', () => {
-  it('parses the snake_case admin driver payload', () => {
-    const driver = DriverSchema.parse(snakeDriver);
-    assert.equal(driver.fullName, 'Khalid Al Harbi');
-    assert.equal(driver.language, 'AR');
+describe('Backend PR #18 driver payload', () => {
+  it('parses the camelCase driver and the list wrapper', () => {
+    const driver = DriverResponseSchema.parse(documentedDriver);
+    assert.equal(driver.fullName, 'Faisal Al-Harbi');
+    assert.equal(driver.phone, '+966512345678');
     assert.equal(driver.isActive, true);
-    assert.deepEqual(driver.areas, [{ id: 'area-1', name: 'Al Nakheel' }]);
-    assert.equal(driver.createdAt, '2026-10-24T00:00:00.000Z');
+    assert.deepEqual(driver.areas, [{ id: AREA_A, name: 'Al Nakheel' }]);
+    assert.equal(driver.createdAt, '2026-10-24T12:00:00.000Z');
+
+    const list = DriverListSchema.parse({ drivers: [documentedDriver] });
+    assert.equal(list.drivers.length, 1);
+    assert.equal(list.drivers[0]?.id, 'drv-1');
   });
 
-  it('accepts camelCase user fields and area id lists', () => {
-    const driver = DriverSchema.parse({
+  it('accepts an empty list and a driver with no phone', () => {
+    const list = DriverListSchema.parse({ drivers: [] });
+    assert.deepEqual(list.drivers, []);
+
+    const driver = DriverResponseSchema.parse({
       id: 'drv-2',
       fullName: 'Sara',
-      phone: '+966500000001',
-      languagePreference: 'en',
+      phone: null,
       isActive: false,
-      areaIds: ['area-9'],
+      areas: [],
     });
-    assert.equal(driver.fullName, 'Sara');
-    assert.equal(driver.language, 'EN');
+    assert.equal(driver.phone, '');
     assert.equal(driver.isActive, false);
-    assert.deepEqual(driver.areas, [{ id: 'area-9', name: null }]);
-    assert.equal(driver.createdAt, null);
+    assert.deepEqual(driver.areas, []);
   });
 
-  it('reads area names from a wrapped driver response', () => {
-    const driver = DriverResponseSchema.parse({ driver: snakeDriver });
-    assert.equal(driver.id, 'drv-1');
-    assert.deepEqual(driverAreaLabels(driver, new Map()), ['Al Nakheel']);
-  });
-
-  it('fills missing area names from the areas catalogue', () => {
-    const driver = DriverSchema.parse({
-      id: 'drv-3',
-      full_name: 'Noura',
-      phone: '+966511111111',
-      area_ids: ['area-2'],
-    });
-    assert.deepEqual(driverAreaLabels(driver, new Map([['area-2', 'Olaya']])), ['Olaya']);
+  it('filters the full list by name or phone', () => {
+    const drivers = DriverListSchema.parse({
+      drivers: [
+        documentedDriver,
+        { id: 'drv-2', fullName: 'Sara Nasser', phone: '+966500000001', isActive: true, areas: [] },
+      ],
+    }).drivers;
+    assert.equal(filterDrivers(drivers, 'faisal').length, 1);
+    assert.equal(filterDrivers(drivers, '500000').length, 1);
+    assert.equal(filterDrivers(drivers, '  ').length, 2);
   });
 });
 
-describe('DriverListSchema', () => {
-  it('parses a paginated list envelope', () => {
-    const list = DriverListSchema.parse({
-      drivers: [snakeDriver],
-      pagination: { page: 2, per_page: 20, total: 21, total_pages: 2 },
-    });
-    assert.equal(list.drivers.length, 1);
-    assert.equal(list.page, 2);
-    assert.equal(list.perPage, 20);
-    assert.equal(list.total, 21);
-    assert.equal(list.totalPages, 2);
-  });
-
-  it('accepts a bare array', () => {
-    const list = DriverListSchema.parse([snakeDriver]);
-    assert.equal(list.total, 1);
-    assert.equal(list.page, 1);
-  });
-
-  it('accepts an empty list', () => {
-    const list = DriverListSchema.parse({
-      drivers: [],
-      pagination: { page: 1, perPage: 20, total: 0, totalPages: 0 },
-    });
-    assert.deepEqual(list.drivers, []);
-    assert.equal(list.totalPages, 0);
-  });
-});
-
-describe('DriverWriteSchema', () => {
-  it('normalizes a local Saudi mobile and keeps every selected area', () => {
+describe('driver write bodies', () => {
+  it('creates with only full_name, phone, and area_ids', () => {
     assert.equal(normalizeDriverPhone('055 123 4567'), '+966551234567');
-    const parsed = DriverWriteSchema.parse({
-      full_name: '  Khalid Al Harbi  ',
+    const parsed = CreateDriverSchema.parse({
+      full_name: '  Faisal Al-Harbi  ',
       phone: '0551234567',
-      language_preference: 'EN',
-      is_active: true,
-      area_ids: ['area-1', 'area-1', 'area-2'],
+      area_ids: [AREA_A, AREA_A, AREA_B],
     });
-    assert.equal(parsed.full_name, 'Khalid Al Harbi');
-    assert.equal(parsed.phone, '+966551234567');
-    assert.deepEqual(parsed.area_ids, ['area-1', 'area-2']);
+    assert.deepEqual(parsed, {
+      full_name: 'Faisal Al-Harbi',
+      phone: '+966551234567',
+      area_ids: [AREA_A, AREA_B],
+    });
+    assert.equal('is_active' in parsed, false);
+    assert.equal('language_preference' in parsed, false);
   });
 
-  it('rejects a short name and a non-Saudi phone', () => {
-    const name = DriverWriteSchema.safeParse({
-      full_name: 'K',
+  it('updates with is_active and allows an empty area list', () => {
+    const parsed = UpdateDriverSchema.parse({
+      full_name: 'Faisal',
       phone: '+966512345678',
-      language_preference: 'EN',
-      is_active: true,
+      is_active: false,
+      area_ids: [],
+    });
+    assert.equal(parsed.is_active, false);
+    assert.deepEqual(parsed.area_ids, []);
+  });
+
+  it('rejects a blank name, a bad phone, and a non-uuid area', () => {
+    const name = CreateDriverSchema.safeParse({
+      full_name: '   ',
+      phone: '+966512345678',
       area_ids: [],
     });
     assert.equal(name.success, false);
 
-    const phone = DriverWriteSchema.safeParse({
-      full_name: 'Khalid',
+    const phone = CreateDriverSchema.safeParse({
+      full_name: 'Faisal',
       phone: '+14155550123',
-      language_preference: 'EN',
-      is_active: true,
       area_ids: [],
     });
     assert.equal(phone.success, false);
-    if (!phone.success) {
-      assert.match(phone.error.issues[0]?.message ?? '', /Saudi format/);
-    }
+
+    const area = CreateDriverSchema.safeParse({
+      full_name: 'Faisal',
+      phone: '+966512345678',
+      area_ids: ['north'],
+    });
+    assert.equal(area.success, false);
   });
 });
 

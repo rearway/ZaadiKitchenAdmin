@@ -1,11 +1,11 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import type { Area, AreaStatus } from '@/features/areas';
 import {
-  DriverWriteSchema,
-  driverLanguageLabel,
+  CreateDriverSchema,
+  UpdateDriverSchema,
+  type CreateDriverInput,
   type Driver,
-  type DriverLanguage,
-  type DriverWriteInput,
+  type UpdateDriverInput,
 } from '../model/drivers.schema';
 
 type Props = {
@@ -17,7 +17,7 @@ type Props = {
   serverError: string | null;
   isPending: boolean;
   onClose: () => void;
-  onSubmit: (input: DriverWriteInput) => void;
+  onSubmit: (input: CreateDriverInput | UpdateDriverInput) => void;
 };
 
 const AREA_STATUS_LABEL: Record<AreaStatus, string> = {
@@ -58,7 +58,6 @@ export default function DriverFormSheet({
 }: Props) {
   const [fullName, setFullName] = useState(driver?.fullName ?? '');
   const [phone, setPhone] = useState(driver?.phone ?? '');
-  const [language, setLanguage] = useState<DriverLanguage>(driver?.language ?? 'EN');
   const [isActive, setIsActive] = useState(driver?.isActive ?? true);
   const [areaIds, setAreaIds] = useState<string[]>(driver?.areas.map((area) => area.id) ?? []);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -79,12 +78,11 @@ export default function DriverFormSheet({
 
   const handleSubmit = () => {
     setSubmitError(null);
-    const parsed = DriverWriteSchema.safeParse({
+    const parsed = (mode === 'edit' ? UpdateDriverSchema : CreateDriverSchema).safeParse({
       full_name: fullName,
       phone,
-      language_preference: language,
-      is_active: isActive,
       area_ids: areaIds,
+      is_active: isActive,
     });
     if (!parsed.success) {
       setSubmitError(parsed.error.issues[0]?.message ?? 'Check the form and try again.');
@@ -194,74 +192,57 @@ export default function DriverFormSheet({
                 color: 'var(--mid)',
               }}
             >
-              Saudi mobile, +966 and 9 digits. A leading 0 is accepted.
+              OTP sign-in number. +966 and 9 digits, or a leading 0.
             </p>
           </div>
 
-          <div>
-            <span style={labelStyle}>Language</span>
-            <div style={{ display: 'flex', gap: 'var(--space-8)' }}>
-              {(['EN', 'AR'] as const).map((value) => {
-                const selected = language === value;
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => setLanguage(value)}
-                    style={{
-                      padding: 'var(--space-8) var(--space-16)',
-                      borderRadius: 'var(--radius-6)',
-                      fontSize: 'var(--text-13)',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      border: selected ? '2px solid var(--danger)' : '1px solid var(--border-med)',
-                      backgroundColor: selected ? 'var(--brand-a10)' : 'var(--surface)',
-                      color: selected ? 'var(--danger)' : 'var(--soft)',
-                    }}
-                  >
-                    {selected ? '✓ ' : ''}
-                    {driverLanguageLabel(value)}
-                  </button>
-                );
-              })}
+          {mode === 'edit' && (
+            <div>
+              <span style={labelStyle}>Status</span>
+              <div style={{ display: 'flex', gap: 'var(--space-8)' }}>
+                {(
+                  [
+                    [true, 'Active'],
+                    [false, 'Inactive'],
+                  ] as const
+                ).map(([value, label]) => {
+                  const selected = isActive === value;
+                  return (
+                    <button
+                      key={label}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setIsActive(value)}
+                      style={{
+                        padding: 'var(--space-8) var(--space-16)',
+                        borderRadius: 'var(--radius-6)',
+                        fontSize: 'var(--text-13)',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        border: selected
+                          ? '2px solid var(--danger)'
+                          : '1px solid var(--border-med)',
+                        backgroundColor: selected ? 'var(--brand-a10)' : 'var(--surface)',
+                        color: selected ? 'var(--danger)' : 'var(--soft)',
+                      }}
+                    >
+                      {selected ? '✓ ' : ''}
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p
+                style={{
+                  margin: 'var(--space-6) 0 0',
+                  fontSize: 'var(--text-12)',
+                  color: 'var(--mid)',
+                }}
+              >
+                Inactive drivers cannot sign in.
+              </p>
             </div>
-          </div>
-
-          <div>
-            <span style={labelStyle}>Status</span>
-            <div style={{ display: 'flex', gap: 'var(--space-8)' }}>
-              {(
-                [
-                  [true, 'Active'],
-                  [false, 'Inactive'],
-                ] as const
-              ).map(([value, label]) => {
-                const selected = isActive === value;
-                return (
-                  <button
-                    key={label}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => setIsActive(value)}
-                    style={{
-                      padding: 'var(--space-8) var(--space-16)',
-                      borderRadius: 'var(--radius-6)',
-                      fontSize: 'var(--text-13)',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      border: selected ? '2px solid var(--danger)' : '1px solid var(--border-med)',
-                      backgroundColor: selected ? 'var(--brand-a10)' : 'var(--surface)',
-                      color: selected ? 'var(--danger)' : 'var(--soft)',
-                    }}
-                  >
-                    {selected ? '✓ ' : ''}
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          )}
 
           <div>
             <span style={labelStyle}>Areas</span>

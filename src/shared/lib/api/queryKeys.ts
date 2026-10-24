@@ -1,6 +1,5 @@
 import type { GetOutOfZoneRequestsParams } from '@/features/areas/api/areas.api';
 import type { GetCustomersParams } from '@/features/customers/api/customers.api';
-import type { GetDriversParams } from '@/features/drivers/api/drivers.api';
 import type { GetLabelsParams } from '@/features/labels/api/labels.api';
 import type { GetMealRatingsParams } from '@/features/menu/model/meal-ratings.schema';
 import type { AssignableMealsParams } from '@/features/menu/model/menu.schema';
@@ -48,6 +47,6 @@ export const queryKeys = {
   },
   drivers: {
     all: ['drivers'] as const,
-    list: (params: GetDriversParams) => ['drivers', 'list', params] as const,
+    detail: (driverId: string) => ['drivers', driverId] as const,
   },
 } as const;
