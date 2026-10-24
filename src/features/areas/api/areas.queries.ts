@@ -1,12 +1,34 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/shared/lib/api/queryKeys';
-import { getAreasApi, createAreaApi, updateAreaApi, getBuildingsApi, addBuildingApi, updateBuildingApi, deleteBuildingApi } from './areas.api';
+import {
+  getAreasApi,
+  getOutOfZoneRequestsApi,
+  createAreaApi,
+  updateAreaApi,
+  getBuildingsApi,
+  addBuildingApi,
+  updateBuildingApi,
+  deleteBuildingApi,
+  OUT_OF_ZONE_REQUESTS_PAGE_SIZE,
+  type GetOutOfZoneRequestsParams,
+} from './areas.api';
 import type { CreateAreaInput, CreateBuildingInput, AreaStatus } from '../model/areas.schema';
 
 export function useAreas() {
   return useQuery({
     queryKey: queryKeys.areas.all,
     queryFn: getAreasApi,
+  });
+}
+
+export function useOutOfZoneRequests(params: GetOutOfZoneRequestsParams = {}) {
+  const page = params.page ?? 1;
+  const perPage = params.perPage ?? OUT_OF_ZONE_REQUESTS_PAGE_SIZE;
+  const queryParams = { page, perPage };
+  return useQuery({
+    queryKey: queryKeys.areas.outOfZoneRequests(queryParams),
+    queryFn: () => getOutOfZoneRequestsApi(queryParams),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -29,8 +51,13 @@ export function useCreateArea() {
 export function useUpdateArea() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ areaId, input }: { areaId: string; input: { name?: string; status?: AreaStatus } }) =>
-      updateAreaApi(areaId, input),
+    mutationFn: ({
+      areaId,
+      input,
+    }: {
+      areaId: string;
+      input: { name?: string; status?: AreaStatus };
+    }) => updateAreaApi(areaId, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.areas.all }),
   });
 }
