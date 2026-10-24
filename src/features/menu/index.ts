@@ -1,2 +1,2 @@
-export { useWeeks } from './api/menu.queries';
+export { useWeeks } from './hooks/useMenuPlannerWeeks';
 export type { Week } from './model/menu.schema';

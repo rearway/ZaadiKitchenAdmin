@@ -8,6 +8,7 @@ import {
   useDeactivateCustomer,
   useCreditWallet,
 } from '@/features/customers/api/customers.queries';
+import CustomerIssueHistory from '@/features/customers/components/CustomerIssueHistory';
 import {
   SUBSCRIPTION_STATUS_LABEL,
   SUBSCRIPTION_STATUS_COLOR,
@@ -69,7 +70,12 @@ export default function CustomerManagement() {
   });
 
   const { data: detail, isLoading: detailLoading } = useCustomerDetail(expandedId ?? '');
-  const { data: history, isLoading: historyLoading } = useCustomerHistory(historyId ?? '');
+  const {
+    data: history,
+    isLoading: historyLoading,
+    isError: isHistoryError,
+    error: historyError,
+  } = useCustomerHistory(historyId ?? '');
   const deactivate = useDeactivateCustomer();
   const creditWallet = useCreditWallet();
 
@@ -111,7 +117,7 @@ export default function CustomerManagement() {
         onError: (err) => {
           setErrorMsg(err instanceof Error ? err.message : 'Failed to credit wallet');
         },
-      },
+      }
     );
   };
 
@@ -240,15 +246,11 @@ export default function CustomerManagement() {
 
       {/* List */}
       {isLoading ? (
-        <div
-          style={{ color: '#9CA3AF', fontSize: '14px', padding: '32px 0', textAlign: 'center' }}
-        >
+        <div style={{ color: '#9CA3AF', fontSize: '14px', padding: '32px 0', textAlign: 'center' }}>
           Loading customers…
         </div>
       ) : customers.length === 0 ? (
-        <div
-          style={{ color: '#9CA3AF', fontSize: '14px', padding: '32px 0', textAlign: 'center' }}
-        >
+        <div style={{ color: '#9CA3AF', fontSize: '14px', padding: '32px 0', textAlign: 'center' }}>
           No customers found.
         </div>
       ) : (
@@ -256,11 +258,12 @@ export default function CustomerManagement() {
           {customers.map((c) => {
             const isExpanded = expandedId === c.id;
             const isChurned = c.subscriptionStatus === 'churned';
-            const statusStyle =
-              SUBSCRIPTION_STATUS_COLOR[c.subscriptionStatus as SubscriptionStatus] ?? {
-                bg: '#333',
-                color: '#FFF',
-              };
+            const statusStyle = SUBSCRIPTION_STATUS_COLOR[
+              c.subscriptionStatus as SubscriptionStatus
+            ] ?? {
+              bg: '#333',
+              color: '#FFF',
+            };
             const avatarColor =
               SUBSCRIPTION_STATUS_AVATAR[c.subscriptionStatus as SubscriptionStatus] ??
               'var(--ops)';
@@ -363,7 +366,11 @@ export default function CustomerManagement() {
                     }}
                   >
                     {c.phone}
-                    {c.endDate ? ` · ends ${c.endDate}` : c.daysLeft > 0 ? ` · ${c.daysLeft} days left` : ''}
+                    {c.endDate
+                      ? ` · ends ${c.endDate}`
+                      : c.daysLeft > 0
+                        ? ` · ${c.daysLeft} days left`
+                        : ''}
                   </div>
 
                   <div
@@ -417,15 +424,10 @@ export default function CustomerManagement() {
                           />
                           <InfoCard
                             label="Address"
-                            value={
-                              (detail?.primaryAddress ?? '').split(',')[0].trim() || '—'
-                            }
+                            value={(detail?.primaryAddress ?? '').split(',')[0].trim() || '—'}
                             sub={
-                              (detail?.primaryAddress ?? '')
-                                .split(',')
-                                .slice(1)
-                                .join(',')
-                                .trim() || ''
+                              (detail?.primaryAddress ?? '').split(',').slice(1).join(',').trim() ||
+                              ''
                             }
                           />
                           <InfoCard
@@ -449,9 +451,7 @@ export default function CustomerManagement() {
                               gap: '12px',
                             }}
                           >
-                            <div
-                              style={{ fontSize: '13px', fontWeight: 600, color: '#D1D5DB' }}
-                            >
+                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#D1D5DB' }}>
                               Credit Wallet
                             </div>
                             <div
@@ -462,9 +462,7 @@ export default function CustomerManagement() {
                                 flexWrap: 'wrap',
                               }}
                             >
-                              <div
-                                style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}
-                              >
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                 <input
                                   type="number"
                                   placeholder="Amount (SAR, max 30)"
@@ -601,6 +599,12 @@ export default function CustomerManagement() {
                               <div style={{ color: '#9CA3AF', fontSize: '13px' }}>
                                 Loading history…
                               </div>
+                            ) : isHistoryError ? (
+                              <div style={{ color: 'var(--danger)', fontSize: 'var(--text-13)' }}>
+                                {historyError instanceof Error
+                                  ? historyError.message
+                                  : 'Failed to load history.'}
+                              </div>
                             ) : history ? (
                               <>
                                 {history.subscriptions.length > 0 && (
@@ -674,38 +678,7 @@ export default function CustomerManagement() {
                                   </div>
                                 )}
 
-                                {history.issues.length > 0 && (
-                                  <div>
-                                    <div
-                                      style={{
-                                        fontSize: '11px',
-                                        color: '#6B7280',
-                                        fontWeight: 600,
-                                        marginBottom: '6px',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.05em',
-                                      }}
-                                    >
-                                      Resolved Issues
-                                    </div>
-                                    {history.issues.map((issue, i) => (
-                                      <div
-                                        key={issue.id || i}
-                                        style={{
-                                          fontSize: '13px',
-                                          color: '#D1D5DB',
-                                          padding: '6px 0',
-                                          borderBottom: '1px solid #222',
-                                          display: 'flex',
-                                          justifyContent: 'space-between',
-                                        }}
-                                      >
-                                        <span>{issue.type || issue.description}</span>
-                                        <span style={{ color: '#9CA3AF' }}>{issue.createdAt}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
+                                <CustomerIssueHistory issues={history.issues} />
 
                                 {history.subscriptions.length === 0 &&
                                   history.deliveries.length === 0 &&

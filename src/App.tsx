@@ -12,6 +12,7 @@ import PrintLabels from './features/labels/pages/PrintLabels';
 import AddDish from './pages/AddDish';
 import AddArea from './pages/AddArea';
 import BuildingManagement from './pages/BuildingManagement';
+import { DriversPage } from '@/features/drivers';
 import { PlansPricing } from '@/features/plans';
 import ProtectedRoute from './app/router/ProtectedRoute';
 import RoleRoute from './app/router/RoleRoute';
@@ -33,6 +34,7 @@ export default function App() {
               <Route path="/customers" element={<CustomerManagement />} />
               <Route path="/comms" element={<Comms />} />
               <Route path="/areas" element={<AreaManagement />} />
+              <Route path="/drivers" element={<DriversPage />} />
               <Route path="/areas/new" element={<AddArea />} />
               <Route path="/areas/:areaId/buildings" element={<BuildingManagement />} />
             </Route>

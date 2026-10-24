@@ -8,20 +8,19 @@ import {
   useRejectIssue,
 } from '../api/daily-ops.queries';
 import { useExportDailyOps } from '@/features/labels/api/labels.queries';
-import { REJECT_REASONS, type Issue, type PipelineStage } from '../model/daily-ops.schema';
+import {
+  REJECT_REASONS,
+  creditPrefillSar,
+  type Issue,
+  type PipelineStage,
+} from '../model/daily-ops.schema';
 import CreditModal from '../components/CreditModal';
+import OpenIssuesColumn from '../components/OpenIssuesColumn';
 import RejectModal from '../components/RejectModal';
 import { ApiError } from '@/shared/types/api';
 
 const MEAL_TYPE_EMOJI: Record<string, string> = { executive: '🍛', salad: '🥗' };
 const STAGE_ICON: Record<string, string> = { locked: '✓', dispatch: '🚚', delivered: '✅' };
-const ISSUE_TYPE_EMOJI: Record<string, string> = {
-  missing: '📦',
-  quality: '😟',
-  wrong_order: '🔄',
-  late: '⏰',
-  other: '❓',
-};
 
 export default function DailyOps() {
   const { role } = useOutletContext<{ role: 'admin' | 'ops' }>();
@@ -29,7 +28,12 @@ export default function DailyOps() {
   const isAdmin = role === 'admin';
 
   const { data: dailyOps, isLoading, error } = useDailyOps();
-  const { data: issuesQueue } = useIssues();
+  const {
+    data: issuesQueue,
+    isError: isIssuesError,
+    error: issuesError,
+    isLoading: isIssuesLoading,
+  } = useIssues();
   const advancePipeline = useAdvancePipeline();
   const creditIssue = useCreditIssue();
   const rejectIssue = useRejectIssue();
@@ -60,8 +64,9 @@ export default function DailyOps() {
           setActiveIssueForCredit(null);
           setCreditAmount('');
         },
-        onError: (err) => setErrorMsg(err instanceof ApiError ? err.message : 'Failed to credit issue'),
-      },
+        onError: (err) =>
+          setErrorMsg(err instanceof ApiError ? err.message : 'Failed to credit issue'),
+      }
     );
   };
 
@@ -70,14 +75,18 @@ export default function DailyOps() {
     const selected = REJECT_REASONS.find((r) => r.id === rejectReasonId);
     if (!selected) return;
     rejectIssue.mutate(
-      { issueId: activeIssueForReject.issue_id, input: { reason: selected.title, note: selected.desc } },
+      {
+        issueId: activeIssueForReject.issue_id,
+        input: { reason: selected.title, note: selected.desc },
+      },
       {
         onSuccess: () => {
           setActiveIssueForReject(null);
           setRejectReasonId('');
         },
-        onError: (err) => setErrorMsg(err instanceof ApiError ? err.message : 'Failed to reject issue'),
-      },
+        onError: (err) =>
+          setErrorMsg(err instanceof ApiError ? err.message : 'Failed to reject issue'),
+      }
     );
   };
 
@@ -90,7 +99,10 @@ export default function DailyOps() {
     setErrorMsg(null);
     advancePipeline.mutate(
       { from_stage: dailyOps.pipeline.stage, to_stage: nextStage },
-      { onError: (err) => setErrorMsg(err instanceof ApiError ? err.message : 'Failed to advance pipeline') },
+      {
+        onError: (err) =>
+          setErrorMsg(err instanceof ApiError ? err.message : 'Failed to advance pipeline'),
+      }
     );
   };
 
@@ -104,7 +116,9 @@ export default function DailyOps() {
 
   if (error || !dailyOps) {
     return (
-      <div style={{ color: 'var(--danger)', fontSize: '14px', padding: '32px 0', textAlign: 'center' }}>
+      <div
+        style={{ color: 'var(--danger)', fontSize: '14px', padding: '32px 0', textAlign: 'center' }}
+      >
         {error instanceof ApiError ? error.message : 'Failed to load daily ops.'}
       </div>
     );
@@ -185,7 +199,13 @@ export default function DailyOps() {
             {isAdmin && (
               <StatBox
                 label="ISSUES"
-                value={(issuesQueue?.open_count ?? 0).toString()}
+                value={
+                  isIssuesLoading
+                    ? '…'
+                    : isIssuesError
+                      ? '—'
+                      : (issuesQueue?.open_count ?? 0).toString()
+                }
                 color="var(--danger)"
               />
             )}
@@ -315,104 +335,17 @@ export default function DailyOps() {
 
         {/* 3c. OPEN ISSUES — admin only */}
         {isAdmin && (
-          <div>
-            <h3
-              style={{
-                fontSize: '14px',
-                color: '#9CA3AF',
-                letterSpacing: '1px',
-                marginBottom: '16px',
-              }}
-            >
-              OPEN ISSUES ({issues.length})
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {issues.length === 0 ? (
-                <div
-                  style={{
-                    padding: '24px',
-                    textAlign: 'center',
-                    color: '#9CA3AF',
-                    border: '1px dashed #333',
-                    borderRadius: '12px',
-                  }}
-                >
-                  No open issues. Great job!
-                </div>
-              ) : (
-                issues.map((issue) => (
-                  <div
-                    key={issue.issue_id}
-                    style={{
-                      backgroundColor: '#1A1A1A',
-                      padding: '20px',
-                      borderRadius: '12px',
-                      border: '1px solid #333',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'inline-block',
-                        padding: '4px 8px',
-                        backgroundColor: 'rgba(255, 115, 64, 0.1)',
-                        color: 'var(--danger)',
-                        borderRadius: '6px',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        marginBottom: '12px',
-                      }}
-                    >
-                      {ISSUE_TYPE_EMOJI[issue.issue_type ?? ''] ?? ''} {issue.issue_type_label}
-                    </div>
-                    <h4 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>
-                      {issue.customer_name}
-                    </h4>
-                    <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '12px' }}>
-                      {issue.delivery_address ?? '—'}
-                    </p>
-                    {issue.description && (
-                      <p
-                        style={{
-                          fontSize: '15px',
-                          fontStyle: 'italic',
-                          marginBottom: '20px',
-                          backgroundColor: '#222',
-                          padding: '12px',
-                          borderRadius: '8px',
-                        }}
-                      >
-                        "{issue.description}"
-                      </p>
-                    )}
-
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                      <button
-                        className="btn-primary"
-                        style={{ padding: '8px 16px', flex: 1 }}
-                        onClick={() => setActiveIssueForCredit(issue)}
-                      >
-                        💳 Credit Wallet
-                      </button>
-                      <button
-                        style={{
-                          backgroundColor: 'transparent',
-                          color: 'var(--danger)',
-                          border: '1px solid var(--danger)',
-                          padding: '8px 16px',
-                          borderRadius: '8px',
-                          fontWeight: 600,
-                          flex: 1,
-                        }}
-                        onClick={() => setActiveIssueForReject(issue)}
-                      >
-                        ✕ Reject
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+          <OpenIssuesColumn
+            issues={issues}
+            isLoading={isIssuesLoading}
+            isError={isIssuesError}
+            error={issuesError}
+            onCredit={(issue) => {
+              setActiveIssueForCredit(issue);
+              setCreditAmount(creditPrefillSar(issue.plan_price_sar));
+            }}
+            onReject={setActiveIssueForReject}
+          />
         )}
       </div>
 

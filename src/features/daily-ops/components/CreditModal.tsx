@@ -1,4 +1,5 @@
 import type { Issue } from '../model/daily-ops.schema';
+import IssueSubject from './IssueSubject';
 import ModalOverlay from './ModalOverlay';
 
 type CreditModalProps = {
@@ -27,8 +28,8 @@ export default function CreditModal({
         Credit Wallet
       </h2>
       <p style={{ color: '#9CA3AF', fontSize: '14px', lineHeight: '1.5', marginBottom: '24px' }}>
-        Issue: {issue.issue_type_label} — {issue.customer_name}. Wallet credit is added
-        immediately and customer is notified via WhatsApp.
+        Issue: <IssueSubject issue={issue} />. Wallet credit is added immediately and customer is
+        notified via WhatsApp.
       </p>
 
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
