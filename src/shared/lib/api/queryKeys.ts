@@ -1,6 +1,7 @@
 import type { GetOutOfZoneRequestsParams } from '@/features/areas/api/areas.api';
 import type { GetCustomersParams } from '@/features/customers/api/customers.api';
 import type { GetLabelsParams } from '@/features/labels/api/labels.api';
+import type { GetMealRatingsParams } from '@/features/menu/model/meal-ratings.schema';
 import type { AssignableMealsParams } from '@/features/menu/model/menu.schema';
 
 export const queryKeys = {
@@ -15,6 +16,8 @@ export const queryKeys = {
     weekDetail: (weekId: string) => ['menu', 'weeks', weekId] as const,
     meals: ['menu', 'meals'] as const,
     mealDetail: (mealId: string) => ['menu', 'meals', mealId] as const,
+    mealRatings: (mealId: string, params: GetMealRatingsParams) =>
+      ['menu', 'meal-ratings', mealId, params] as const,
     assignableMeals: (params: AssignableMealsParams) =>
       ['menu', 'meals', 'assignable', params] as const,
   },

@@ -6,11 +6,13 @@ import {
   type QueryClient,
 } from '@tanstack/react-query';
 import { queryKeys } from '@/shared/lib/api/queryKeys';
+import { ApiError } from '@/shared/types/api';
 import {
   getWeeksApi,
   getWeekDetailApi,
   getMealsApi,
   getMealDetailApi,
+  getMealRatingsApi,
   getAssignableMealsApi,
   assignSlotApi,
   addDaySlotApi,
@@ -34,6 +36,7 @@ import {
   type MealType,
   type UpdateMealInput,
 } from '../model/menu.schema';
+import { MEAL_RATINGS_PAGE_SIZE, type GetMealRatingsParams } from '../model/meal-ratings.schema';
 
 function invalidateWeek(qc: QueryClient, weekId: string) {
   return Promise.all([
@@ -69,6 +72,24 @@ export function useMealDetail(mealId: string) {
     queryKey: queryKeys.menu.mealDetail(mealId),
     queryFn: () => getMealDetailApi(mealId),
     enabled: !!mealId,
+  });
+}
+
+export function useMealRatings(mealId: string, params: GetMealRatingsParams = {}) {
+  const page = params.page ?? 1;
+  const perPage = params.perPage ?? MEAL_RATINGS_PAGE_SIZE;
+  const queryParams = { page, perPage };
+  return useQuery({
+    queryKey: queryKeys.menu.mealRatings(mealId, queryParams),
+    queryFn: () => getMealRatingsApi(mealId, queryParams),
+    enabled: !!mealId,
+    placeholderData: keepPreviousData,
+    retry: (failureCount, error) => {
+      if (error instanceof ApiError && (error.statusCode === 404 || error.statusCode === 401)) {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 }
 
