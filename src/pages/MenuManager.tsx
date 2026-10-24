@@ -147,6 +147,7 @@ export default function MenuManager() {
   const [libraryTypeFilter, setLibraryTypeFilter] = useState<MealTypeFilter>('all');
   const [confirmClearSlotId, setConfirmClearSlotId] = useState<string | null>(null);
   const [confirmStatusMealId, setConfirmStatusMealId] = useState<string | null>(null);
+  const [expandedRatingsMealId, setExpandedRatingsMealId] = useState<string | null>(null);
   const [confirmUnpublish, setConfirmUnpublish] = useState(false);
   const [liveMenuConfirm, setLiveMenuConfirm] = useState<LiveMenuConfirm | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -633,18 +634,25 @@ export default function MenuManager() {
               const isStatusPending =
                 updateMealStatus.isPending && updateMealStatus.variables?.id === meal.id;
               const isConfirmingStatus = confirmStatusMealId === meal.id;
+              const isRatingsOpen = expandedRatingsMealId === meal.id;
+              const isAttachedBelow = isConfirmingStatus || isRatingsOpen;
               return (
                 <div key={meal.id}>
                   <div
+                    onClick={() =>
+                      setExpandedRatingsMealId(isRatingsOpen ? null : meal.id)
+                    }
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       padding: '16px',
                       backgroundColor: '#1A1A1A',
-                      borderRadius: isConfirmingStatus ? '12px 12px 0 0' : '12px',
+                      borderRadius: isAttachedBelow ? '12px 12px 0 0' : '12px',
                       border: '1px solid #333',
-                      borderBottom: isConfirmingStatus ? 'none' : '1px solid #333',
+                      borderBottom: isAttachedBelow ? 'none' : '1px solid #333',
+                      borderLeft: isRatingsOpen ? '4px solid var(--danger)' : '1px solid #333',
                       opacity: meal.status === 'draft' ? 0.6 : meal.status === 'updated' ? 0.85 : 1,
+                      cursor: 'pointer',
                     }}
                   >
                     <MealIcon
@@ -669,7 +677,10 @@ export default function MenuManager() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: '12px' }}
+                      onClick={(event) => event.stopPropagation()}
+                    >
                       <span
                         style={{
                           padding: '4px 8px',
@@ -727,7 +738,46 @@ export default function MenuManager() {
                         </button>
                       )}
                     </div>
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        marginLeft: '12px',
+                        flexShrink: 0,
+                        color: '#9CA3AF',
+                      }}
+                    >
+                      <span style={{ fontSize: '13px', fontWeight: 600 }}>Ratings</span>
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          display: 'inline-block',
+                          transform: isRatingsOpen ? 'rotate(90deg)' : 'none',
+                          transition: 'transform 0.2s',
+                        }}
+                      >
+                        ▶
+                      </span>
+                    </div>
                   </div>
+
+                  {isRatingsOpen && (
+                    <div
+                      style={{
+                        backgroundColor: '#111',
+                        border: '1px solid #333',
+                        borderTop: 'none',
+                        borderLeft: '4px solid var(--danger)',
+                        borderBottom: isConfirmingStatus ? 'none' : '1px solid #333',
+                        borderRadius: isConfirmingStatus ? 0 : '0 0 12px 12px',
+                        padding: '24px',
+                      }}
+                    >
+                      <MealRatingsPanel mealId={meal.id} />
+                    </div>
+                  )}
 
                   {/* Inline status change confirmation */}
                   {isConfirmingStatus && (
@@ -1389,8 +1439,6 @@ function EditMealModal({
         {detailLoading && (
           <p style={{ color: '#9CA3AF', fontSize: '14px', margin: 0 }}>Loading meal…</p>
         )}
-
-        <MealRatingsPanel key={mealId} mealId={mealId} />
 
         {detail && detail.status === 'updated' && (
           <div
