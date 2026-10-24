@@ -26,13 +26,50 @@ import {
   mapApiDayToWeekDayDetail,
   type DaySlotMutationResponse,
   type MealType,
+  type Week,
   type WeekDetail,
   type Slot,
 } from '../model/menu.schema';
+import {
+  parseWeekAheadSignal,
+  resolveWeekAheadAccess,
+  type WeekAheadSignal,
+} from '../model/week-horizon';
 
-export async function getWeeksApi() {
-  const res = await client.get('/admin/menu/weeks', { params: { count: 2 } });
-  return unwrap(res.data, z.object({ weeks: z.array(WeekSchema) }).transform((d) => d.weeks));
+const MenuWeeksPayloadSchema = z
+  .object({
+    weeks: z.array(WeekSchema),
+  })
+  .passthrough();
+
+export type MenuWeeksResult = {
+  weeks: Week[];
+  signal: WeekAheadSignal | null;
+};
+
+/**
+ * `count` is the number of Saudi work weeks to load, starting at the current one.
+ * 2 = current + next. 3 = current + two ahead (after Thursday 18:00 Asia/Riyadh).
+ */
+export async function getWeeksApi(count: number): Promise<MenuWeeksResult> {
+  const res = await client.get('/admin/menu/weeks', { params: { count } });
+  const payload = unwrap(res.data, MenuWeeksPayloadSchema);
+  return {
+    weeks: payload.weeks,
+    signal: parseWeekAheadSignal(payload) ?? parseWeekAheadSignal(res.data),
+  };
+}
+
+/** Refetches with the API horizon when a lock signal disagrees with the requested count. */
+export async function fetchMenuWeeks(count: number): Promise<MenuWeeksResult> {
+  const first = await getWeeksApi(count);
+  const access = resolveWeekAheadAccess(new Date(), first.signal);
+  if (access.listCount === count) return first;
+  const second = await getWeeksApi(access.listCount);
+  return {
+    weeks: second.weeks,
+    signal: second.signal ?? first.signal,
+  };
 }
 
 export async function getWeekDetailApi(weekId: string): Promise<WeekDetail> {

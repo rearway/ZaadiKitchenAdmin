@@ -2,7 +2,6 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  useWeeks,
   useWeekDetail,
   useMeals,
   useMealDetail,
@@ -18,7 +17,9 @@ import {
   usePhotoUpload,
 } from '@/features/menu/api/menu.queries';
 import MealRatingsPanel from '@/features/menu/components/MealRatingsPanel';
+import WeekAheadLockNote from '@/features/menu/components/WeekAheadLockNote';
 import WeekPlannerDay from '@/features/menu/components/WeekPlannerDay';
+import { useMenuPlannerWeeks } from '@/features/menu/hooks/useMenuPlannerWeeks';
 import type {
   Meal,
   MealLibraryStatusFilter,
@@ -39,6 +40,7 @@ import {
   parseMealPublishedWeekConflict,
   toKeyIngredientsArray,
 } from '@/features/menu/model/menu.schema';
+import { isWeekBeyondHorizon, weekAheadLockMessage } from '@/features/menu/model/week-horizon';
 import { queryKeys } from '@/shared/lib/api/queryKeys';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { ApiError } from '@/shared/types/api';
@@ -153,13 +155,15 @@ export default function MenuManager() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [assignErrorMsg, setAssignErrorMsg] = useState<string | null>(null);
 
-  const { data: weeks = [], isLoading: weeksLoading } = useWeeks();
+  const { weeks, access, isLoading: weeksLoading } = useMenuPlannerWeeks();
+  const safeWeekIndex = weeks.length === 0 ? 0 : Math.min(weekIndex, weeks.length - 1);
+  const lockMessage = weekAheadLockMessage(access);
   const { data: meals = [], isLoading: mealsLoading } = useMeals({
     status: libraryStatusFilter,
     meal_type: libraryTypeFilter === 'all' ? undefined : libraryTypeFilter,
   });
 
-  const currentWeek: Week | undefined = weeks[weekIndex];
+  const currentWeek: Week | undefined = weeks[safeWeekIndex];
   const { data: weekDetail, isLoading: slotsLoading } = useWeekDetail(currentWeek?.id ?? '');
   const publishWeek = usePublishWeek();
   const unpublishWeek = useUnpublishWeek();
@@ -171,8 +175,9 @@ export default function MenuManager() {
   const updateMealStatus = useUpdateMealStatus();
 
   const plannerDays = weekDetail?.days ?? [];
-  const canPublish = weekDetail?.publishReady ?? false;
-  const canEditWeek = isWeekEditable(weekDetail);
+  const publishLocked = currentWeek ? isWeekBeyondHorizon(currentWeek.start_date, access) : false;
+  const canPublish = (weekDetail?.publishReady ?? false) && !publishLocked;
+  const canEditWeek = isWeekEditable(weekDetail) && !publishLocked;
 
   const openAssignModal = (slot: PlannerSlot) => {
     setConfirmClearSlotId(null);
@@ -365,41 +370,62 @@ export default function MenuManager() {
       {activeTab === 'planner' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           {/* Week Navigation */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <button
-              className="btn-ghost"
-              style={{ padding: '8px 12px' }}
-              disabled={weekIndex === 0}
-              onClick={() => setWeekIndex((i) => Math.max(0, i - 1))}
-            >
-              ‹
-            </button>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <div
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <button
+                className="btn-ghost"
                 style={{
-                  backgroundColor: 'rgba(228,40,29,.10)',
-                  color: 'var(--danger)',
-                  padding: '8px 16px',
-                  borderRadius: '16px',
-                  fontWeight: 600,
+                  padding: '8px 12px',
+                  opacity: safeWeekIndex === 0 ? 0.45 : 1,
+                  cursor: safeWeekIndex === 0 ? 'not-allowed' : 'pointer',
+                }}
+                disabled={safeWeekIndex === 0}
+                aria-label="Previous week"
+                onClick={() => setWeekIndex(Math.max(0, safeWeekIndex - 1))}
+              >
+                ‹
+              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div
+                  style={{
+                    backgroundColor: 'rgba(228,40,29,.10)',
+                    color: 'var(--danger)',
+                    padding: '8px 16px',
+                    borderRadius: '16px',
+                    fontWeight: 600,
+                  }}
+                >
+                  {currentWeek ? formatWeekRange(currentWeek) : '…'}
+                </div>
+                {currentWeek?.fill_status?.label && (
+                  <span style={{ fontSize: '12px', color: '#9CA3AF', paddingInlineStart: '4px' }}>
+                    {currentWeek.fill_status.label}
+                  </span>
+                )}
+              </div>
+              <button
+                className="btn-ghost"
+                style={{
+                  padding: '8px 12px',
+                  opacity: safeWeekIndex >= weeks.length - 1 ? 0.45 : 1,
+                  cursor: safeWeekIndex >= weeks.length - 1 ? 'not-allowed' : 'pointer',
+                }}
+                disabled={safeWeekIndex >= weeks.length - 1}
+                aria-label={
+                  access.locked && safeWeekIndex >= weeks.length - 1 ? lockMessage : 'Next week'
+                }
+                title={
+                  access.locked && safeWeekIndex >= weeks.length - 1 ? lockMessage : undefined
+                }
+                onClick={() => {
+                  if (access.locked && safeWeekIndex >= weeks.length - 1) return;
+                  setWeekIndex(Math.min(weeks.length - 1, safeWeekIndex + 1));
                 }}
               >
-                {currentWeek ? formatWeekRange(currentWeek) : '…'}
-              </div>
-              {currentWeek?.fill_status?.label && (
-                <span style={{ fontSize: '12px', color: '#9CA3AF', paddingInlineStart: '4px' }}>
-                  {currentWeek.fill_status.label}
-                </span>
-              )}
+                ›
+              </button>
             </div>
-            <button
-              className="btn-ghost"
-              style={{ padding: '8px 12px' }}
-              disabled={weekIndex >= weeks.length - 1}
-              onClick={() => setWeekIndex((i) => Math.min(weeks.length - 1, i + 1))}
-            >
-              ›
-            </button>
+            {access.locked && <WeekAheadLockNote message={lockMessage} />}
           </div>
 
           {(weeksLoading || slotsLoading) && (
@@ -447,7 +473,8 @@ export default function MenuManager() {
               alignItems: 'flex-start',
             }}
           >
-            {!canPublish && weekDetail?.publishBlockedReason && (
+            {publishLocked && <WeekAheadLockNote message={lockMessage} />}
+            {!publishLocked && !canPublish && weekDetail?.publishBlockedReason && (
               <div
                 style={{
                   backgroundColor: 'rgba(245, 230, 66, 0.1)',
@@ -551,7 +578,10 @@ export default function MenuManager() {
                 }}
                 disabled={publishWeek.isPending || !canPublish || weekDetail?.status === 'past'}
                 onClick={() => {
-                  if (!currentWeek) return;
+                  if (!currentWeek || publishLocked) {
+                    if (publishLocked) setErrorMsg(lockMessage);
+                    return;
+                  }
                   setErrorMsg(null);
                   publishWeek.mutate(currentWeek.id, {
                     onError: (err) => {

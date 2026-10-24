@@ -8,7 +8,6 @@ import {
 import { queryKeys } from '@/shared/lib/api/queryKeys';
 import { ApiError } from '@/shared/types/api';
 import {
-  getWeeksApi,
   getWeekDetailApi,
   getMealsApi,
   getMealDetailApi,
@@ -43,13 +42,6 @@ function invalidateWeek(qc: QueryClient, weekId: string) {
     qc.invalidateQueries({ queryKey: queryKeys.menu.weekDetail(weekId) }),
     qc.invalidateQueries({ queryKey: queryKeys.menu.weeks }),
   ]);
-}
-
-export function useWeeks() {
-  return useQuery({
-    queryKey: queryKeys.menu.weeks,
-    queryFn: getWeeksApi,
-  });
 }
 
 export function useWeekDetail(weekId: string) {
