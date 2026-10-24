@@ -9,6 +9,7 @@ import {
   Map,
   BadgePercent,
   LogOut,
+  Truck,
 } from 'lucide-react';
 import { logoutApi } from '@/features/auth/api/auth.api';
 import { useSessionStore } from '@/store/useSessionStore';
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { label: 'Customers', path: '/customers', icon: Users, feature: 'customers' },
   { label: 'Comms', path: '/comms', icon: MessageSquare, feature: 'comms' },
   { label: 'Areas & Buildings', path: '/areas', icon: Map, feature: 'areas' },
+  { label: 'Drivers', path: '/drivers', icon: Truck, feature: 'drivers' },
   { label: 'Plans & Pricing', path: '/plans', icon: BadgePercent, feature: 'plans' },
 ];
 
@@ -64,7 +66,11 @@ export default function Sidebar() {
             gap: '8px',
           }}
         >
-          <img src="/brand/platio-logo-white.svg" alt="Platio" style={{ height: '20px', width: 'auto' }} />
+          <img
+            src="/brand/platio-logo-white.svg"
+            alt="Platio"
+            style={{ height: '20px', width: 'auto' }}
+          />
           Ops
         </h2>
       </div>
