@@ -20,6 +20,7 @@ import {
   publishWeekApi,
   unpublishWeekApi,
   createMealApi,
+  deleteMealApi,
   updateMealApi,
   updateMealStatusApi,
   getPhotoUploadUrlApi,
@@ -183,11 +184,22 @@ export function useCreateMeal() {
   });
 }
 
+export function useDeleteMeal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (mealId: string) => deleteMealApi(mealId),
+    onSuccess: (_result, mealId) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: queryKeys.menu.meals }),
+        qc.invalidateQueries({ queryKey: queryKeys.menu.mealDetail(mealId) }),
+      ]),
+  });
+}
+
 export function useUpdateMeal() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: UpdateMealInput }) =>
-      updateMealApi(id, input),
+    mutationFn: ({ id, input }: { id: string; input: UpdateMealInput }) => updateMealApi(id, input),
     onSuccess: (_, { id }) =>
       Promise.all([
         qc.invalidateQueries({ queryKey: queryKeys.menu.meals }),

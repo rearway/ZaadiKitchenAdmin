@@ -65,3 +65,39 @@ export function unwrap<T>(responseData: unknown, schema: z.ZodType<T>): T {
   }
   return result.data;
 }
+
+/**
+ * Soft-delete body used by admin meal and area DELETE.
+ * Accepts the `{ message, data: { deleted, deletedAt } }` envelope, snake_case
+ * `deleted_at`, or an empty 204 body. A missing flag still counts as deleted
+ * when the request itself succeeded.
+ */
+export const SoftDeleteResultSchema = z
+  .object({
+    id: z.string().optional(),
+    meal_id: z.string().optional(),
+    mealId: z.string().optional(),
+    area_id: z.string().optional(),
+    areaId: z.string().optional(),
+    deleted: z.boolean().optional(),
+    deletedAt: z.string().nullable().optional(),
+    deleted_at: z.string().nullable().optional(),
+  })
+  .passthrough()
+  .transform((row) => ({
+    id: row.id ?? row.meal_id ?? row.mealId ?? row.area_id ?? row.areaId ?? null,
+    deleted: row.deleted ?? true,
+    deletedAt: row.deletedAt ?? row.deleted_at ?? null,
+  }));
+export type SoftDeleteResult = z.infer<typeof SoftDeleteResultSchema>;
+
+export function parseSoftDeleteResponse(responseData: unknown): SoftDeleteResult {
+  if (responseData == null || responseData === '') {
+    return { id: null, deleted: true, deletedAt: null };
+  }
+  const envelope = z.object({ data: z.unknown() }).passthrough().safeParse(responseData);
+  if (envelope.success && (envelope.data.data == null || envelope.data.data === '')) {
+    return { id: null, deleted: true, deletedAt: null };
+  }
+  return unwrap(responseData, SoftDeleteResultSchema);
+}
