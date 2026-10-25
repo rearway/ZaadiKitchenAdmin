@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { client } from '@/shared/lib/api/client';
-import { unwrap } from '@/shared/types/api';
+import { ApiError, parseSoftDeleteResponse, unwrap } from '@/shared/types/api';
 import {
   AreaSchema,
   BuildingSchema,
@@ -43,6 +43,20 @@ export async function updateAreaApi(areaId: string, input: { name?: string; stat
   const body = input.status === 'active' ? { ...input, confirm_activation: true } : input;
   const res = await client.patch(`/admin/areas/${areaId}`, body);
   return unwrap(res.data, AreaSchema);
+}
+
+/**
+ * DELETE /admin/areas/:area_id
+ * Soft-delete. Response data includes `deleted` and `deletedAt`.
+ * List endpoints omit the area after success.
+ */
+export async function deleteAreaApi(areaId: string) {
+  const res = await client.delete(`/admin/areas/${areaId}`);
+  const result = parseSoftDeleteResponse(res.data);
+  if (!result.deleted) {
+    throw new ApiError('Area was not deleted.', res.status, res.data);
+  }
+  return result;
 }
 
 export async function getBuildingsApi(areaId: string) {

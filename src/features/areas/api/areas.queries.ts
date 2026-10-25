@@ -4,6 +4,7 @@ import {
   getAreasApi,
   getOutOfZoneRequestsApi,
   createAreaApi,
+  deleteAreaApi,
   updateAreaApi,
   getBuildingsApi,
   addBuildingApi,
@@ -44,6 +45,14 @@ export function useCreateArea() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateAreaInput) => createAreaApi(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.areas.all }),
+  });
+}
+
+export function useDeleteArea() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (areaId: string) => deleteAreaApi(areaId),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.areas.all }),
   });
 }

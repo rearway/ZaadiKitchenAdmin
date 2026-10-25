@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { client } from '@/shared/lib/api/client';
-import { unwrap } from '@/shared/types/api';
+import { ApiError, parseSoftDeleteResponse, unwrap } from '@/shared/types/api';
 import {
   MealRatingsResponseSchema,
   MEAL_RATINGS_MAX_PAGE_SIZE,
@@ -191,6 +191,20 @@ export async function createMealApi(input: CreateMealInput) {
 export async function updateMealApi(mealId: string, input: UpdateMealInput) {
   const res = await client.patch(`/admin/meals/${mealId}`, input);
   return unwrap(res.data, MealSchema);
+}
+
+/**
+ * DELETE /admin/meals/:meal_id
+ * Soft-delete. Response data includes `deleted` and `deletedAt`.
+ * List endpoints omit the meal after success.
+ */
+export async function deleteMealApi(mealId: string) {
+  const res = await client.delete(`/admin/meals/${mealId}`);
+  const result = parseSoftDeleteResponse(res.data);
+  if (!result.deleted) {
+    throw new ApiError('Meal was not deleted.', res.status, res.data);
+  }
+  return result;
 }
 
 export async function updateMealStatusApi(
