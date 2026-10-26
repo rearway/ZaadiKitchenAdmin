@@ -93,3 +93,14 @@ input.labels-date-input::-webkit-calendar-picker-indicator {
   cursor: pointer;
   opacity: 0.85;
 }
+
+input.drivers-date-input {
+  color-scheme: dark;
+  background-color: var(--blk3);
+}
+
+input.drivers-date-input::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+  opacity: 0.85;
+}

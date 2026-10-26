@@ -48,5 +48,8 @@ export const queryKeys = {
   drivers: {
     all: ['drivers'] as const,
     detail: (driverId: string) => ['drivers', driverId] as const,
+    deliveries: (driverId: string, date: string) =>
+      ['drivers', driverId, 'deliveries', date] as const,
+    unassignedAreas: ['drivers', 'unassigned-areas'] as const,
   },
 } as const;
