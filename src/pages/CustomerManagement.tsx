@@ -10,11 +10,14 @@ import {
 } from '@/features/customers/api/customers.queries';
 import CustomerIssueHistory from '@/features/customers/components/CustomerIssueHistory';
 import {
+  ACCOUNT_STATUS_COLOR,
+  ACCOUNT_STATUS_LABEL,
   CUSTOMER_LIST_STATUS_FILTERS,
   SUBSCRIPTION_STATUS_COLOR,
   SUBSCRIPTION_STATUS_AVATAR,
   customerPlanPresentation,
   formatWalletSar,
+  type AccountStatus,
   type SubscriptionStatus,
 } from '@/features/customers/model/customers.schema';
 
@@ -259,6 +262,7 @@ export default function CustomerManagement() {
             const isExpanded = expandedId === c.id;
             const subscriptionStatus =
               isExpanded && detail ? detail.subscriptionStatus : c.subscriptionStatus;
+            const accountStatus = isExpanded && detail ? detail.accountStatus : c.accountStatus;
             const daysLeft = isExpanded && detail ? detail.daysLeft : c.daysLeft;
             const mealsLeft = isExpanded && detail ? detail.mealsLeft : c.mealsLeft;
             const presentation = customerPlanPresentation({
@@ -337,21 +341,28 @@ export default function CustomerManagement() {
                       {c.name}
                     </h4>
 
-                    <div
-                      style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '200px' }}
-                    >
+                    {presentation.showPlanName ? (
                       <div
                         style={{
-                          width: '12px',
-                          height: '12px',
-                          borderRadius: '50%',
-                          backgroundColor: 'var(--danger)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          width: '200px',
                         }}
-                      />
-                      <span style={{ fontSize: '14px', color: '#D1D5DB' }}>
-                        {presentation.planLabel}
-                      </span>
-                    </div>
+                      >
+                        <div
+                          style={{
+                            width: '12px',
+                            height: '12px',
+                            borderRadius: '50%',
+                            backgroundColor: 'var(--danger)',
+                          }}
+                        />
+                        <span style={{ fontSize: '14px', color: '#D1D5DB' }}>
+                          {presentation.planLabel}
+                        </span>
+                      </div>
+                    ) : null}
 
                     <span
                       style={{
@@ -365,6 +376,7 @@ export default function CustomerManagement() {
                     >
                       {presentation.statusLabel}
                     </span>
+                    <AccountBadge status={accountStatus} />
                   </div>
 
                   <div
@@ -377,10 +389,12 @@ export default function CustomerManagement() {
                     }}
                   >
                     <div>{c.phone}</div>
-                    <div>{presentation.daysLabel}</div>
-                    <div style={{ fontSize: '13px', color: '#6B7280' }}>
-                      {presentation.mealsLabel}
-                    </div>
+                    {presentation.showDays ? <div>{presentation.daysLabel}</div> : null}
+                    {presentation.showMeals ? (
+                      <div style={{ fontSize: '13px', color: '#6B7280' }}>
+                        {presentation.mealsLabel}
+                      </div>
+                    ) : null}
                   </div>
 
                   <div
@@ -415,6 +429,9 @@ export default function CustomerManagement() {
                       </div>
                     ) : (
                       <>
+                        <div style={{ marginBottom: '16px' }}>
+                          <AccountBadge status={accountStatus} />
+                        </div>
                         <div
                           style={{
                             display: 'grid',
@@ -425,9 +442,14 @@ export default function CustomerManagement() {
                         >
                           <InfoCard
                             label="Plan"
-                            value={presentation.planLabel}
-                            sub={presentation.daysLabel}
-                            sub2={presentation.mealsLabel}
+                            value={
+                              presentation.showPlanName
+                                ? presentation.planLabel
+                                : presentation.statusLabel
+                            }
+                            valueColor={presentation.showPlanName ? '#FFF' : statusStyle.color}
+                            sub={presentation.showDays ? presentation.daysLabel : undefined}
+                            sub2={presentation.showMeals ? presentation.mealsLabel : undefined}
                           />
                           <InfoCard
                             label="Wallet"
@@ -793,10 +815,40 @@ export default function CustomerManagement() {
   );
 }
 
+function AccountBadge({ status }: { status: AccountStatus }) {
+  const style = ACCOUNT_STATUS_COLOR[status];
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+      <span
+        style={{
+          fontSize: '11px',
+          fontWeight: 600,
+          color: 'var(--soft)',
+          letterSpacing: '0.04em',
+        }}
+      >
+        Account
+      </span>
+      <span
+        style={{
+          padding: '4px 10px',
+          borderRadius: '16px',
+          fontSize: '12px',
+          fontWeight: 600,
+          backgroundColor: style.bg,
+          color: style.color,
+        }}
+      >
+        {ACCOUNT_STATUS_LABEL[status]}
+      </span>
+    </span>
+  );
+}
+
 type InfoCardProps = {
   label: string;
   value: string;
-  sub: string;
+  sub?: string;
   sub2?: string;
   valueColor?: string;
 };
@@ -817,7 +869,7 @@ function InfoCard({ label, value, sub, sub2, valueColor = '#FFF' }: InfoCardProp
       <div style={{ fontSize: '16px', fontWeight: 600, color: valueColor, marginBottom: '4px' }}>
         {value}
       </div>
-      <div style={{ fontSize: '13px', color: '#6B7280' }}>{sub}</div>
+      {sub ? <div style={{ fontSize: '13px', color: '#6B7280' }}>{sub}</div> : null}
       {sub2 ? (
         <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '2px' }}>{sub2}</div>
       ) : null}
