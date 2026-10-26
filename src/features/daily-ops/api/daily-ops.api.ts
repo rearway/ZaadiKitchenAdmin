@@ -9,11 +9,12 @@ import {
   type CreditIssueInput,
   type RejectIssueInput,
 } from '../model/daily-ops.schema';
+import { dailyOpsQueryParams } from '../model/daily-ops-date';
 
 const basePath = (role: Role) => (role === 'admin' ? '/admin/daily-ops' : '/ops/daily-ops');
 
-export async function getDailyOpsApi(role: Role) {
-  const res = await client.get(basePath(role));
+export async function getDailyOpsApi(role: Role, date: string) {
+  const res = await client.get(basePath(role), { params: dailyOpsQueryParams(date) });
   return unwrap(res.data, DailyOpsSchema);
 }
 
@@ -23,8 +24,10 @@ export async function advancePipelineApi(role: Role, input: AdvancePipelineInput
 }
 
 /** Admin-only — the richer issues list (includes delivery_address), used for the queue UI. */
-export async function getIssuesApi() {
-  const res = await client.get('/admin/daily-ops/issues');
+export async function getIssuesApi(date?: string) {
+  const res = await client.get('/admin/daily-ops/issues', {
+    params: date ? dailyOpsQueryParams(date) : undefined,
+  });
   return unwrap(res.data, IssuesQueueSchema);
 }
 
