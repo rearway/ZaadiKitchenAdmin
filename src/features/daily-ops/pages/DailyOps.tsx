@@ -16,6 +16,7 @@ import {
 } from '../model/daily-ops.schema';
 import CreditModal from '../components/CreditModal';
 import OpenIssuesColumn from '../components/OpenIssuesColumn';
+import PipelineAdvanceControl from '../components/PipelineAdvanceControl';
 import RejectModal from '../components/RejectModal';
 import { ApiError } from '@/shared/types/api';
 
@@ -221,18 +222,13 @@ export default function DailyOps() {
           ))}
         </div>
 
-        {pipeline.can_advance && (
-          <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
-            <button
-              className="btn-primary"
-              style={{ padding: '10px 20px', opacity: advancePipeline.isPending ? 0.7 : 1 }}
-              disabled={advancePipeline.isPending}
-              onClick={handleAdvance}
-            >
-              {advancePipeline.isPending ? 'Advancing…' : (pipeline.advance_label ?? 'Advance →')}
-            </button>
-          </div>
-        )}
+        <PipelineAdvanceControl
+          stage={pipeline.stage}
+          canAdvance={pipeline.can_advance}
+          advanceLabel={pipeline.advance_label}
+          isPending={advancePipeline.isPending}
+          onAdvance={handleAdvance}
+        />
         {pipeline.locked_note && (
           <p style={{ color: '#6B7280', fontSize: '13px', marginTop: '12px', marginBottom: 0 }}>
             {pipeline.locked_note}
