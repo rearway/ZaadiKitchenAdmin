@@ -11,8 +11,8 @@ import { useExportDailyOps } from '@/features/labels/api/labels.queries';
 import {
   REJECT_REASONS,
   creditPrefillSar,
+  nextPipelineStatusChange,
   type Issue,
-  type PipelineStage,
 } from '../model/daily-ops.schema';
 import CreditModal from '../components/CreditModal';
 import OpenIssuesColumn from '../components/OpenIssuesColumn';
@@ -92,18 +92,20 @@ export default function DailyOps() {
 
   const handleAdvance = () => {
     if (!dailyOps) return;
-    const stages = dailyOps.pipeline.stages.map((s) => s.id as PipelineStage);
-    const currentIndex = stages.indexOf(dailyOps.pipeline.stage);
-    const nextStage = stages[currentIndex + 1];
-    if (!nextStage) return;
+    const input = nextPipelineStatusChange({
+      date: dailyOps.date,
+      stage: dailyOps.pipeline.stage,
+      stages: dailyOps.pipeline.stages,
+    });
+    if (!input) {
+      setErrorMsg('This status change is not available for the loaded day.');
+      return;
+    }
     setErrorMsg(null);
-    advancePipeline.mutate(
-      { from_stage: dailyOps.pipeline.stage, to_stage: nextStage },
-      {
-        onError: (err) =>
-          setErrorMsg(err instanceof ApiError ? err.message : 'Failed to advance pipeline'),
-      }
-    );
+    advancePipeline.mutate(input, {
+      onError: (err) =>
+        setErrorMsg(err instanceof ApiError ? err.message : 'Failed to update dispatch status'),
+    });
   };
 
   if (isLoading) {

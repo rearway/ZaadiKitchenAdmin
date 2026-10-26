@@ -1,13 +1,17 @@
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useSessionStore } from '@/store/useSessionStore';
 import { logoutApi } from '@/features/auth/api/auth.api';
 import type { User } from '@/shared/types/api';
+import AccountMenu from './AccountMenu';
 
 type Props = { user: User | null };
 
 export default function TopNav({ user }: Props) {
   const clearSession = useSessionStore((s) => s.clearSession);
   const navigate = useNavigate();
+  const accountRef = useRef<HTMLDivElement>(null);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'short',
@@ -15,7 +19,24 @@ export default function TopNav({ user }: Props) {
     day: 'numeric',
   });
 
+  useEffect(() => {
+    if (!isAccountOpen) return;
+    const handlePointer = (event: MouseEvent) => {
+      if (!accountRef.current?.contains(event.target as Node)) setIsAccountOpen(false);
+    };
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsAccountOpen(false);
+    };
+    document.addEventListener('mousedown', handlePointer);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handlePointer);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [isAccountOpen]);
+
   const handleLogout = () => {
+    setIsAccountOpen(false);
     void logoutApi().finally(() => {
       clearSession();
       navigate('/login');
@@ -59,7 +80,11 @@ export default function TopNav({ user }: Props) {
                 gap: '8px',
               }}
             >
-              <img src="/brand/platio-logo-white.svg" alt="Platio" style={{ height: '20px', width: 'auto' }} />
+              <img
+                src="/brand/platio-logo-white.svg"
+                alt="Platio"
+                style={{ height: '20px', width: 'auto' }}
+              />
               Ops
             </h2>
             <nav style={{ display: 'flex', gap: '8px' }}>
@@ -86,25 +111,39 @@ export default function TopNav({ user }: Props) {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
         <span style={{ color: '#9CA3AF', fontSize: '15px' }}>{today}</span>
-        <button
-          onClick={handleLogout}
-          title="Sign out"
-          style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '50%',
-            backgroundColor: 'var(--danger)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#000',
-            fontWeight: 'bold',
-            fontSize: '14px',
-            cursor: 'pointer',
-          }}
-        >
-          {initial}
-        </button>
+        <div ref={accountRef} style={{ position: 'relative' }}>
+          <button
+            type="button"
+            aria-label="Account"
+            aria-haspopup="menu"
+            aria-expanded={isAccountOpen}
+            onClick={() => setIsAccountOpen((open) => !open)}
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--danger)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#000',
+              fontWeight: 'bold',
+              fontSize: '14px',
+              cursor: 'pointer',
+              border: 'none',
+            }}
+          >
+            {initial}
+          </button>
+          {isAccountOpen && (
+            <AccountMenu
+              name={user?.name || 'Account'}
+              email={user?.email || ''}
+              roleLabel={isAdmin ? 'Admin' : 'Ops'}
+              onSignOut={handleLogout}
+            />
+          )}
+        </div>
       </div>
     </header>
   );

@@ -13,6 +13,9 @@ import {
   SUBSCRIPTION_STATUS_LABEL,
   SUBSCRIPTION_STATUS_COLOR,
   SUBSCRIPTION_STATUS_AVATAR,
+  formatDaysLeft,
+  formatMealsLeft,
+  formatWalletSar,
   type SubscriptionStatus,
 } from '@/features/customers/model/customers.schema';
 
@@ -21,7 +24,6 @@ const STATUS_FILTERS = [
   { key: 'active', label: 'Active' },
   { key: 'paused', label: 'Paused' },
   { key: 'expired', label: 'Expired' },
-  { key: 'churned', label: 'Churned' },
 ] as const;
 
 export default function CustomerManagement() {
@@ -29,7 +31,11 @@ export default function CustomerManagement() {
   const role = useSessionStore((s) => s.user?.role);
   const isAdmin = role === 'admin';
 
-  const urlStatus = searchParams.get('status') ?? undefined;
+  const rawUrlStatus = searchParams.get('status') ?? undefined;
+  const urlStatus =
+    rawUrlStatus && rawUrlStatus !== 'churned' && STATUS_FILTERS.some((f) => f.key === rawUrlStatus)
+      ? rawUrlStatus
+      : undefined;
   const urlFilter = searchParams.get('filter') ?? undefined;
   const urlPlan = searchParams.get('plan') ?? undefined;
 
@@ -41,9 +47,18 @@ export default function CustomerManagement() {
   const [creditNote, setCreditNote] = useState('');
   const [inputValue, setInputValue] = useState('');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(urlStatus ?? 'all');
+  const [trackedUrlStatus, setTrackedUrlStatus] = useState(urlStatus);
   const [page, setPage] = useState(1);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  if (urlStatus !== trackedUrlStatus) {
+    setTrackedUrlStatus(urlStatus);
+    if (urlStatus) {
+      setStatusFilter(urlStatus);
+      setPage(1);
+    }
+  }
 
   // Debounce search to avoid firing on every keystroke
   useEffect(() => {
@@ -54,22 +69,20 @@ export default function CustomerManagement() {
     return () => clearTimeout(id);
   }, [inputValue]);
 
-  useEffect(() => {
-    if (urlStatus && STATUS_FILTERS.some((f) => f.key === urlStatus)) {
-      setStatusFilter(urlStatus);
-      setPage(1);
-    }
-  }, [urlStatus]);
-
   const { data: customerData, isLoading } = useCustomers({
     search: search || undefined,
-    status: urlStatus ?? (statusFilter === 'all' ? undefined : statusFilter),
+    status: statusFilter === 'all' ? undefined : statusFilter,
     filter: urlFilter,
     plan: urlPlan,
     page,
   });
 
-  const { data: detail, isLoading: detailLoading } = useCustomerDetail(expandedId ?? '');
+  const {
+    data: detail,
+    isLoading: detailLoading,
+    isError: isDetailError,
+    error: detailError,
+  } = useCustomerDetail(expandedId ?? '');
   const {
     data: history,
     isLoading: historyLoading,
@@ -257,16 +270,21 @@ export default function CustomerManagement() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {customers.map((c) => {
             const isExpanded = expandedId === c.id;
-            const isChurned = c.subscriptionStatus === 'churned';
+            const subscriptionStatus =
+              (isExpanded ? detail?.subscriptionStatus : undefined) ?? c.subscriptionStatus;
+            const daysLeft = (isExpanded ? detail?.daysLeft : undefined) ?? c.daysLeft;
+            const mealsLeft = (isExpanded ? detail?.mealsLeft : undefined) ?? c.mealsLeft;
+            const walletBalance =
+              (isExpanded ? detail?.walletBalance : undefined) ?? c.walletBalance;
+            const isChurned = subscriptionStatus === 'churned';
             const statusStyle = SUBSCRIPTION_STATUS_COLOR[
-              c.subscriptionStatus as SubscriptionStatus
+              subscriptionStatus as SubscriptionStatus
             ] ?? {
               bg: '#333',
               color: '#FFF',
             };
             const avatarColor =
-              SUBSCRIPTION_STATUS_AVATAR[c.subscriptionStatus as SubscriptionStatus] ??
-              'var(--ops)';
+              SUBSCRIPTION_STATUS_AVATAR[subscriptionStatus as SubscriptionStatus] ?? 'var(--ops)';
             const initial = c.name ? c.name[0].toUpperCase() : '?';
             const showCreditForm = creditId === c.id;
             const showDeactivateConfirm = confirmDeactivateId === c.id;
@@ -352,8 +370,7 @@ export default function CustomerManagement() {
                         color: statusStyle.color,
                       }}
                     >
-                      {SUBSCRIPTION_STATUS_LABEL[c.subscriptionStatus as SubscriptionStatus] ??
-                        c.subscriptionStatus}
+                      {SUBSCRIPTION_STATUS_LABEL[subscriptionStatus] ?? subscriptionStatus}
                     </span>
                   </div>
 
@@ -365,12 +382,9 @@ export default function CustomerManagement() {
                       marginRight: '16px',
                     }}
                   >
-                    {c.phone}
-                    {c.endDate
-                      ? ` · ends ${c.endDate}`
-                      : c.daysLeft > 0
-                        ? ` · ${c.daysLeft} days left`
-                        : ''}
+                    <div>{c.phone}</div>
+                    <div>{formatDaysLeft(daysLeft)}</div>
+                    <div>{formatMealsLeft(mealsLeft)}</div>
                   </div>
 
                   <div
@@ -399,6 +413,19 @@ export default function CustomerManagement() {
                       </div>
                     ) : (
                       <>
+                        {isDetailError && (
+                          <div
+                            style={{
+                              color: 'var(--danger)',
+                              fontSize: '14px',
+                              marginBottom: '16px',
+                            }}
+                          >
+                            {detailError instanceof Error
+                              ? detailError.message
+                              : 'Failed to load customer details.'}
+                          </div>
+                        )}
                         <div
                           style={{
                             display: 'grid',
@@ -410,15 +437,12 @@ export default function CustomerManagement() {
                           <InfoCard
                             label="Plan"
                             value={detail?.plan || c.plan || '—'}
-                            sub={
-                              detail?.planEndDate
-                                ? `Ends ${detail.planEndDate}`
-                                : `${c.daysLeft} days left`
-                            }
+                            sub={formatDaysLeft(daysLeft)}
+                            footnote={formatMealsLeft(mealsLeft)}
                           />
                           <InfoCard
                             label="Wallet"
-                            value={`SAR ${(detail?.walletBalance ?? c.walletBalance).toFixed(2)}`}
+                            value={formatWalletSar(walletBalance)}
                             sub="Credit balance"
                             valueColor="var(--danger)"
                           />
@@ -787,10 +811,11 @@ type InfoCardProps = {
   label: string;
   value: string;
   sub: string;
+  footnote?: string;
   valueColor?: string;
 };
 
-function InfoCard({ label, value, sub, valueColor = '#FFF' }: InfoCardProps) {
+function InfoCard({ label, value, sub, footnote, valueColor = '#FFF' }: InfoCardProps) {
   return (
     <div
       style={{
@@ -807,6 +832,9 @@ function InfoCard({ label, value, sub, valueColor = '#FFF' }: InfoCardProps) {
         {value}
       </div>
       <div style={{ fontSize: '13px', color: '#6B7280' }}>{sub}</div>
+      {footnote ? (
+        <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '4px' }}>{footnote}</div>
+      ) : null}
     </div>
   );
 }

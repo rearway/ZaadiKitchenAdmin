@@ -28,7 +28,7 @@ export const PipelineSchema = z.object({
   locked_at: z.string().nullable().optional(),
   locked_note: z.string().nullable().optional(),
   can_advance: z.boolean(),
-  advance_label: z.string().optional(),
+  advance_label: z.string().nullable().optional(),
 });
 export type Pipeline = z.infer<typeof PipelineSchema>;
 
@@ -80,20 +80,54 @@ export const DailyOpsSchema = z.object({
 });
 export type DailyOps = z.infer<typeof DailyOpsSchema>;
 
-export const AdvancePipelineResultSchema = z.object({
-  date: z.string(),
-  previous_stage: StageValueSchema.optional(),
-  current_stage: StageValueSchema.optional(),
-  advanced_at: z.string().optional(),
-  advanced_by: z.string().optional(),
-});
+export const AdvancePipelineResultSchema = z
+  .object({
+    date: z.string().optional(),
+    previous_stage: z.string().optional(),
+    previousStage: z.string().optional(),
+    current_stage: z.string().optional(),
+    currentStage: z.string().optional(),
+    advanced_at: z.unknown().optional(),
+    advanced_by: z.unknown().optional(),
+  })
+  .passthrough()
+  .transform((row) => ({
+    date: row.date ?? '',
+    previous_stage: row.previous_stage ?? row.previousStage,
+    current_stage: row.current_stage ?? row.currentStage,
+    advanced_at: typeof row.advanced_at === 'string' ? row.advanced_at : undefined,
+    advanced_by: typeof row.advanced_by === 'string' ? row.advanced_by : undefined,
+  }));
 export type AdvancePipelineResult = z.infer<typeof AdvancePipelineResultSchema>;
 
 export type AdvancePipelineInput = {
-  date?: string;
-  from_stage: PipelineStage;
-  to_stage: PipelineStage;
+  date: string;
+  from_stage: 'locked' | 'dispatch';
+  to_stage: 'dispatch' | 'delivered';
 };
+
+/**
+ * Dispatch and Delivered are status changes on the loaded ops date.
+ * `POST /admin/daily-ops/pipeline/advance` requires `date` plus the current and next stage.
+ */
+export function nextPipelineStatusChange(input: {
+  date: string;
+  stage: PipelineStage;
+  stages: Array<{ id: string }>;
+}): AdvancePipelineInput | null {
+  const dateMatch = /^(\d{4}-\d{2}-\d{2})/.exec(input.date.trim());
+  const date = dateMatch?.[1];
+  if (!date) return null;
+  if (input.stage !== 'locked' && input.stage !== 'dispatch') return null;
+  const next = input.stages[input.stages.findIndex((stage) => stage.id === input.stage) + 1]?.id;
+  if (input.stage === 'locked' && next === 'dispatch') {
+    return { date, from_stage: 'locked', to_stage: 'dispatch' };
+  }
+  if (input.stage === 'dispatch' && next === 'delivered') {
+    return { date, from_stage: 'dispatch', to_stage: 'delivered' };
+  }
+  return null;
+}
 
 export type CreditIssueInput = {
   credit_sar: number;

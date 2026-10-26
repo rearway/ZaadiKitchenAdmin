@@ -15,7 +15,11 @@ export default function RevenueDashboard() {
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKsa);
 
   const { data: summary, isLoading: summaryLoading, error: summaryError } = useRevenueSummary();
-  const { data: daily, isLoading: dailyLoading, error: dailyError } = useRevenueDaily(selectedMonth);
+  const {
+    data: daily,
+    isLoading: dailyLoading,
+    error: dailyError,
+  } = useRevenueDaily(selectedMonth);
 
   const monthOptions = useMemo(() => {
     if (daily?.available_months.length) return daily.available_months;
@@ -29,7 +33,7 @@ export default function RevenueDashboard() {
 
   const planTotal = useMemo(
     () => summary?.subscribers_by_plan.reduce((sum, p) => sum + p.count, 0) ?? 0,
-    [summary],
+    [summary]
   );
 
   const error =
@@ -119,7 +123,7 @@ export default function RevenueDashboard() {
               {formatMrrChangeBadge(
                 summary.mrr.change_pct,
                 summary.mrr.change_direction,
-                summary.mrr.comparison_label,
+                summary.mrr.comparison_label
               )}
             </div>
           )}
@@ -142,7 +146,6 @@ export default function RevenueDashboard() {
             label="CHURNED"
             value={summaryLoading ? '…' : String(summary?.subscriber_counts.churned ?? 0)}
             color="var(--danger)"
-            onClick={() => navigate('/customers?status=churned')}
           />
         </div>
       </div>
@@ -189,7 +192,9 @@ export default function RevenueDashboard() {
           </div>
 
           {dailyLoading ? (
-            <div style={{ color: '#9CA3AF', fontSize: '14px', padding: '48px 0', textAlign: 'center' }}>
+            <div
+              style={{ color: '#9CA3AF', fontSize: '14px', padding: '48px 0', textAlign: 'center' }}
+            >
               Loading daily revenue…
             </div>
           ) : (
@@ -241,7 +246,9 @@ export default function RevenueDashboard() {
           </h3>
 
           {summaryLoading ? (
-            <div style={{ color: '#9CA3AF', fontSize: '14px', padding: '48px 0', textAlign: 'center' }}>
+            <div
+              style={{ color: '#9CA3AF', fontSize: '14px', padding: '48px 0', textAlign: 'center' }}
+            >
               Loading plan breakdown…
             </div>
           ) : (
@@ -289,14 +296,14 @@ export default function RevenueDashboard() {
                 color: 'var(--danger)',
               }}
             >
-              {summaryLoading ? '…' : summary?.key_metrics.avg_skip_rate.value ?? 0}
+              {summaryLoading ? '…' : (summary?.key_metrics.avg_skip_rate.value ?? 0)}
             </span>
             {!summaryLoading && summary && (
               <span style={{ color: '#9CA3AF', fontSize: '14px' }}>
                 {formatSkipRateChange(
                   summary.key_metrics.avg_skip_rate.change,
                   summary.key_metrics.avg_skip_rate.change_direction,
-                  summary.key_metrics.avg_skip_rate.comparison_label,
+                  summary.key_metrics.avg_skip_rate.comparison_label
                 )}
               </span>
             )}
@@ -347,7 +354,7 @@ type StatTileProps = {
   label: string;
   value: string;
   color?: string;
-  onClick: () => void;
+  onClick?: () => void;
 };
 
 function StatTile({ label, value, color = '#FFF', onClick }: StatTileProps) {
@@ -358,7 +365,7 @@ function StatTile({ label, value, color = '#FFF', onClick }: StatTileProps) {
         backgroundColor: '#222',
         padding: '16px 20px',
         borderRadius: '12px',
-        cursor: 'pointer',
+        cursor: onClick ? 'pointer' : 'default',
         transition: 'background-color 0.2s',
         display: 'flex',
         flexDirection: 'column',

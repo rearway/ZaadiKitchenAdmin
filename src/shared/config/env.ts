@@ -1,3 +1,5 @@
+const viteEnv = import.meta.env as { VITE_API_BASE_URL?: string } | undefined;
+
 export const env = {
-  apiBaseUrl: (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '/api/v1',
+  apiBaseUrl: viteEnv?.VITE_API_BASE_URL ?? '/api/v1',
 } as const;
