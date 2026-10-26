@@ -36,6 +36,7 @@
   --grn-l: #dcfce7; /* success light bg */
   --ops: #374151; /* ops role badge, escalate button */
   --ops-l: rgba(55, 65, 81, 0.08);
+  --purple: #8b5cf6; /* paused status text */
   --purple-a10: rgba(139, 92, 246, 0.1); /* Paused status tint */
   --papaya-a10: rgba(255, 115, 64, 0.1); /* issue-type badge, paused zone */
 
@@ -75,6 +76,7 @@
      ------------------------------------------------------------------------- */
   --teal-a15: rgba(0, 200, 150, 0.15); /* Login page bg gradient */
   --teal-a05: rgba(0, 200, 150, 0.05); /* Login role-card selected (removed, kept for reference) */
+  --warn: #f5e642; /* yellow status text */
   --warn-a10: rgba(245, 230, 66, 0.1); /* yellow warning / info bg */
   /* rgba(239, 68, 68, ...) (#EF4444) — pulse keyframe ring colour.
      Cannot be referenced via var() inside JSX @keyframes strings.

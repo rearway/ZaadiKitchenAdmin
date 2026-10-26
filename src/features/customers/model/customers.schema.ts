@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
-export type SubscriptionStatus = 'active' | 'paused' | 'expired' | 'cancelled' | 'churned';
+export type SubscriptionStatus = 'none' | 'active' | 'paused' | 'expired' | 'cancelled' | 'churned';
+
+/** Sign-in state. Separate from the subscription status. */
+export type AccountStatus = 'active' | 'inactive';
 
 /** Users list filters. Churned is not a list filter. */
 export const CUSTOMER_LIST_STATUS_FILTERS = [
@@ -65,21 +68,61 @@ export function readWalletBalance(source: unknown): number | null {
   return firstNumber(wallet, ['balance_sar', 'balanceSar', 'balance']);
 }
 
+function knownSubscriptionStatus(value: unknown): SubscriptionStatus | null {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  if (KNOWN_SUBSCRIPTION_STATUSES.has(normalized as SubscriptionStatus)) {
+    return normalized as SubscriptionStatus;
+  }
+  return null;
+}
+
 /**
- * Status is the subscription's stored status. A past `endDate` must not turn
- * `active` into Expired — mobile keeps `active` until the row's status changes.
+ * Plan status is the picked subscription's status.
+ * `subscription: null` is Not subscribed. `isActive` and `deletedAt` are the
+ * account, not the plan. A past `endDate` must not turn `active` into Expired.
  * Calendar `daysRemaining` is not a status.
  */
 export function resolveSubscriptionStatus(source: unknown): SubscriptionStatus {
   const row = asRecord(source);
-  if (!row) return 'active';
-  const subscription = asRecord(row.subscription);
-  const raw =
-    subscription?.status ?? row.subscriptionStatus ?? row.subscription_status ?? row.status;
-  const normalized = typeof raw === 'string' ? raw.trim().toLowerCase() : '';
-  if (KNOWN_SUBSCRIPTION_STATUSES.has(normalized as SubscriptionStatus)) {
-    return normalized as SubscriptionStatus;
+  if (!row) return 'none';
+
+  if (
+    Object.prototype.hasOwnProperty.call(row, 'subscription') &&
+    asRecord(row.subscription) == null
+  ) {
+    return 'none';
   }
+
+  const subscription = asRecord(row.subscription);
+  if (subscription) return knownSubscriptionStatus(subscription.status) ?? 'active';
+
+  return (
+    knownSubscriptionStatus(row.subscriptionStatus) ??
+    knownSubscriptionStatus(row.subscription_status) ??
+    knownSubscriptionStatus(row.status) ??
+    'none'
+  );
+}
+
+function isDeletedAccount(row: Record<string, unknown>): boolean {
+  if (row.deleted === true) return true;
+  const deletedAt = row.deletedAt ?? row.deleted_at;
+  if (deletedAt == null) return false;
+  if (typeof deletedAt === 'string') return deletedAt.trim().length > 0;
+  return true;
+}
+
+/**
+ * Account status is whether the user can sign in.
+ * Admin deactivate sets `isActive` false. Account deletion sets `isActive`
+ * false and `deletedAt`. Either one is Inactive.
+ */
+export function resolveAccountStatus(source: unknown): AccountStatus {
+  const row = asRecord(source);
+  if (!row) return 'active';
+  if (isDeletedAccount(row)) return 'inactive';
+  const flag = row.isActive ?? row.is_active;
+  if (flag === false) return 'inactive';
   return 'active';
 }
 
@@ -189,6 +232,7 @@ export const CustomerSchema = z
       phone: text(c.phone),
       email: text(c.email),
       subscriptionStatus: resolveSubscriptionStatus(c),
+      accountStatus: resolveAccountStatus(c),
       plan: readPlan(c),
       endDate: readEndDate(c),
       daysLeft: allowance.daysLeft,
@@ -251,6 +295,7 @@ export const CustomerDetailSchema = z
       phone: text(c.phone),
       email: text(c.email),
       subscriptionStatus: resolveSubscriptionStatus(c),
+      accountStatus: resolveAccountStatus(c),
       plan: readPlan(c),
       planEndDate: readEndDate(c),
       walletBalance: readWalletBalance(c),
@@ -463,7 +508,10 @@ export const CreditWalletInputSchema = z.object({
 });
 export type CreditWalletInput = z.infer<typeof CreditWalletInputSchema>;
 
+export const NOT_SUBSCRIBED_LABEL = 'Not subscribed';
+
 export const SUBSCRIPTION_STATUS_LABEL: Record<SubscriptionStatus, string> = {
+  none: NOT_SUBSCRIBED_LABEL,
   active: 'Active',
   paused: 'Paused',
   expired: 'Expired',
@@ -473,17 +521,67 @@ export const SUBSCRIPTION_STATUS_LABEL: Record<SubscriptionStatus, string> = {
 
 export const SUBSCRIPTION_STATUS_COLOR: Record<SubscriptionStatus, { bg: string; color: string }> =
   {
-    active: { bg: 'rgba(228,40,29,0.10)', color: 'var(--danger)' },
-    paused: { bg: 'rgba(139,92,246,0.1)', color: 'var(--ops)' },
-    expired: { bg: 'rgba(255,115,64,0.1)', color: 'var(--danger)' },
-    cancelled: { bg: 'rgba(107,114,128,0.1)', color: '#9CA3AF' },
+    none: { bg: 'var(--brand-a10)', color: 'var(--danger)' },
+    active: { bg: 'var(--grn-l)', color: 'var(--grn)' },
+    paused: { bg: 'var(--purple-a10)', color: 'var(--purple)' },
+    expired: { bg: 'var(--border-ui)', color: 'var(--soft)' },
+    cancelled: { bg: 'var(--warn-a10)', color: 'var(--warn)' },
     churned: { bg: 'rgba(107,114,128,0.1)', color: '#9CA3AF' },
   };
 
+export const ACCOUNT_STATUS_LABEL: Record<AccountStatus, string> = {
+  active: 'Active',
+  inactive: 'Inactive',
+};
+
+/** Account Active stays a neutral chip. Inactive is a visible gray badge. */
+export const ACCOUNT_STATUS_COLOR: Record<AccountStatus, { bg: string; color: string }> = {
+  active: { bg: 'var(--surface)', color: 'var(--white)' },
+  inactive: { bg: 'var(--mid)', color: 'var(--white)' },
+};
+
 export const SUBSCRIPTION_STATUS_AVATAR: Record<SubscriptionStatus, string> = {
+  none: '#6B7280',
   active: 'var(--ops)',
   paused: 'var(--danger)',
   expired: '#F59E0B',
   cancelled: '#6B7280',
   churned: '#6B7280',
 };
+
+const MEAL_ALLOWANCE_STATUSES = new Set<SubscriptionStatus>([
+  'active',
+  'paused',
+  'cancelled',
+  'churned',
+]);
+
+/** List and detail copy for the plan chip, plan name, days left, and meals left. */
+export function customerPlanPresentation(input: {
+  subscriptionStatus: SubscriptionStatus;
+  plan: string;
+  daysLeft: number | null;
+  mealsLeft: number | null;
+}): {
+  statusLabel: string;
+  planLabel: string;
+  showPlanName: boolean;
+  showDays: boolean;
+  showMeals: boolean;
+  daysLabel: string;
+  mealsLabel: string;
+} {
+  const showCounts = MEAL_ALLOWANCE_STATUSES.has(input.subscriptionStatus);
+  const showDays = showCounts && input.daysLeft != null;
+  const showMeals = showCounts && input.mealsLeft != null;
+  const planLabel = input.plan.trim();
+  return {
+    statusLabel: SUBSCRIPTION_STATUS_LABEL[input.subscriptionStatus],
+    planLabel,
+    showPlanName: input.subscriptionStatus !== 'none' && planLabel.length > 0,
+    showDays,
+    showMeals,
+    daysLabel: showDays ? formatDaysLeft(input.daysLeft) : '',
+    mealsLabel: showMeals ? formatMealsLeft(input.mealsLeft) : '',
+  };
+}
