@@ -12,6 +12,7 @@ import {
 import {
   DailyOpsSchema,
   pipelineAdvanceInput,
+  showPipelineAdvanceControl,
 } from '../src/features/daily-ops/model/daily-ops.schema.ts';
 
 const liveDetail = {
@@ -195,5 +196,29 @@ describe('BUG-013 dispatch status change', () => {
     });
     assert.equal(ops.pipeline.can_advance, false);
     assert.equal(ops.pipeline.advance_label, null);
+  });
+
+  it('shows the advance control for locked and dispatch even when can_advance is false', () => {
+    assert.equal(showPipelineAdvanceControl('locked', false), true);
+    assert.equal(showPipelineAdvanceControl('dispatch', false), true);
+    assert.equal(showPipelineAdvanceControl('locked', true), true);
+    assert.equal(showPipelineAdvanceControl('dispatch', true), true);
+  });
+
+  it('keeps hiding pending and delivered when can_advance is false', () => {
+    assert.equal(showPipelineAdvanceControl('pending', false), false);
+    assert.equal(showPipelineAdvanceControl('delivered', false), false);
+    assert.equal(showPipelineAdvanceControl('pending', true), true);
+    assert.equal(showPipelineAdvanceControl('delivered', true), true);
+  });
+
+  it('does not use the advance label to decide the next stage', () => {
+    assert.deepEqual(pipelineAdvanceInput('2026-10-26', 'locked'), {
+      date: '2026-10-26',
+      from_stage: 'locked',
+      to_stage: 'dispatch',
+    });
+    assert.equal(pipelineAdvanceInput('2026-10-26', 'pending'), null);
+    assert.equal(pipelineAdvanceInput('2026-10-26', 'delivered'), null);
   });
 });
