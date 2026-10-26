@@ -11,11 +11,9 @@ import {
 import CustomerIssueHistory from '@/features/customers/components/CustomerIssueHistory';
 import {
   CUSTOMER_LIST_STATUS_FILTERS,
-  SUBSCRIPTION_STATUS_LABEL,
   SUBSCRIPTION_STATUS_COLOR,
   SUBSCRIPTION_STATUS_AVATAR,
-  formatDaysLeft,
-  formatMealsLeft,
+  customerPlanPresentation,
   formatWalletSar,
   type SubscriptionStatus,
 } from '@/features/customers/model/customers.schema';
@@ -263,6 +261,12 @@ export default function CustomerManagement() {
               isExpanded && detail ? detail.subscriptionStatus : c.subscriptionStatus;
             const daysLeft = isExpanded && detail ? detail.daysLeft : c.daysLeft;
             const mealsLeft = isExpanded && detail ? detail.mealsLeft : c.mealsLeft;
+            const presentation = customerPlanPresentation({
+              subscriptionStatus,
+              plan: isExpanded && detail ? detail.plan || c.plan : c.plan,
+              daysLeft,
+              mealsLeft,
+            });
             const isChurned = subscriptionStatus === 'churned';
             const statusStyle = SUBSCRIPTION_STATUS_COLOR[
               subscriptionStatus as SubscriptionStatus
@@ -344,7 +348,9 @@ export default function CustomerManagement() {
                           backgroundColor: 'var(--danger)',
                         }}
                       />
-                      <span style={{ fontSize: '14px', color: '#D1D5DB' }}>{c.plan || '—'}</span>
+                      <span style={{ fontSize: '14px', color: '#D1D5DB' }}>
+                        {presentation.planLabel}
+                      </span>
                     </div>
 
                     <span
@@ -357,8 +363,7 @@ export default function CustomerManagement() {
                         color: statusStyle.color,
                       }}
                     >
-                      {SUBSCRIPTION_STATUS_LABEL[subscriptionStatus as SubscriptionStatus] ??
-                        subscriptionStatus}
+                      {presentation.statusLabel}
                     </span>
                   </div>
 
@@ -372,9 +377,9 @@ export default function CustomerManagement() {
                     }}
                   >
                     <div>{c.phone}</div>
-                    <div>{formatDaysLeft(daysLeft)}</div>
+                    <div>{presentation.daysLabel}</div>
                     <div style={{ fontSize: '13px', color: '#6B7280' }}>
-                      {formatMealsLeft(mealsLeft)}
+                      {presentation.mealsLabel}
                     </div>
                   </div>
 
@@ -420,9 +425,9 @@ export default function CustomerManagement() {
                         >
                           <InfoCard
                             label="Plan"
-                            value={detail.plan || c.plan || '—'}
-                            sub={formatDaysLeft(detail.daysLeft)}
-                            sub2={formatMealsLeft(detail.mealsLeft)}
+                            value={presentation.planLabel}
+                            sub={presentation.daysLabel}
+                            sub2={presentation.mealsLabel}
                           />
                           <InfoCard
                             label="Wallet"

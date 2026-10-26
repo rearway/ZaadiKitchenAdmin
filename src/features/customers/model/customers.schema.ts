@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export type SubscriptionStatus = 'active' | 'paused' | 'expired' | 'cancelled' | 'churned';
+export type SubscriptionStatus = 'none' | 'active' | 'paused' | 'expired' | 'cancelled' | 'churned';
 
 /** Users list filters. Churned is not a list filter. */
 export const CUSTOMER_LIST_STATUS_FILTERS = [
@@ -65,22 +65,40 @@ export function readWalletBalance(source: unknown): number | null {
   return firstNumber(wallet, ['balance_sar', 'balanceSar', 'balance']);
 }
 
+function knownSubscriptionStatus(value: unknown): SubscriptionStatus | null {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  if (KNOWN_SUBSCRIPTION_STATUSES.has(normalized as SubscriptionStatus)) {
+    return normalized as SubscriptionStatus;
+  }
+  return null;
+}
+
 /**
- * Status is the subscription's stored status. A past `endDate` must not turn
- * `active` into Expired — mobile keeps `active` until the row's status changes.
+ * Plan status is the picked subscription's status.
+ * `subscription: null` is no plan. `isActive` means the account can sign in
+ * and is not a plan. A past `endDate` must not turn `active` into Expired.
  * Calendar `daysRemaining` is not a status.
  */
 export function resolveSubscriptionStatus(source: unknown): SubscriptionStatus {
   const row = asRecord(source);
-  if (!row) return 'active';
-  const subscription = asRecord(row.subscription);
-  const raw =
-    subscription?.status ?? row.subscriptionStatus ?? row.subscription_status ?? row.status;
-  const normalized = typeof raw === 'string' ? raw.trim().toLowerCase() : '';
-  if (KNOWN_SUBSCRIPTION_STATUSES.has(normalized as SubscriptionStatus)) {
-    return normalized as SubscriptionStatus;
+  if (!row) return 'none';
+
+  if (
+    Object.prototype.hasOwnProperty.call(row, 'subscription') &&
+    asRecord(row.subscription) == null
+  ) {
+    return 'none';
   }
-  return 'active';
+
+  const subscription = asRecord(row.subscription);
+  if (subscription) return knownSubscriptionStatus(subscription.status) ?? 'active';
+
+  return (
+    knownSubscriptionStatus(row.subscriptionStatus) ??
+    knownSubscriptionStatus(row.subscription_status) ??
+    knownSubscriptionStatus(row.status) ??
+    'none'
+  );
 }
 
 /**
@@ -463,7 +481,10 @@ export const CreditWalletInputSchema = z.object({
 });
 export type CreditWalletInput = z.infer<typeof CreditWalletInputSchema>;
 
+export const NO_PLAN_LABEL = 'No plan';
+
 export const SUBSCRIPTION_STATUS_LABEL: Record<SubscriptionStatus, string> = {
+  none: NO_PLAN_LABEL,
   active: 'Active',
   paused: 'Paused',
   expired: 'Expired',
@@ -473,6 +494,7 @@ export const SUBSCRIPTION_STATUS_LABEL: Record<SubscriptionStatus, string> = {
 
 export const SUBSCRIPTION_STATUS_COLOR: Record<SubscriptionStatus, { bg: string; color: string }> =
   {
+    none: { bg: 'rgba(107,114,128,0.1)', color: '#9CA3AF' },
     active: { bg: 'rgba(228,40,29,0.10)', color: 'var(--danger)' },
     paused: { bg: 'rgba(139,92,246,0.1)', color: 'var(--ops)' },
     expired: { bg: 'rgba(255,115,64,0.1)', color: 'var(--danger)' },
@@ -481,9 +503,38 @@ export const SUBSCRIPTION_STATUS_COLOR: Record<SubscriptionStatus, { bg: string;
   };
 
 export const SUBSCRIPTION_STATUS_AVATAR: Record<SubscriptionStatus, string> = {
+  none: '#6B7280',
   active: 'var(--ops)',
   paused: 'var(--danger)',
   expired: '#F59E0B',
   cancelled: '#6B7280',
   churned: '#6B7280',
 };
+
+/** List and detail copy for the plan chip, plan name, days left, and meals left. */
+export function customerPlanPresentation(input: {
+  subscriptionStatus: SubscriptionStatus;
+  plan: string;
+  daysLeft: number | null;
+  mealsLeft: number | null;
+}): {
+  statusLabel: string;
+  planLabel: string;
+  daysLabel: string;
+  mealsLabel: string;
+} {
+  if (input.subscriptionStatus === 'none') {
+    return {
+      statusLabel: NO_PLAN_LABEL,
+      planLabel: NO_PLAN_LABEL,
+      daysLabel: NO_PLAN_LABEL,
+      mealsLabel: NO_PLAN_LABEL,
+    };
+  }
+  return {
+    statusLabel: SUBSCRIPTION_STATUS_LABEL[input.subscriptionStatus],
+    planLabel: input.plan || '—',
+    daysLabel: formatDaysLeft(input.daysLeft),
+    mealsLabel: formatMealsLeft(input.mealsLeft),
+  };
+}
