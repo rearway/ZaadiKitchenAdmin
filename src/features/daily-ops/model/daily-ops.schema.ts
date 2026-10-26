@@ -28,7 +28,7 @@ export const PipelineSchema = z.object({
   locked_at: z.string().nullable().optional(),
   locked_note: z.string().nullable().optional(),
   can_advance: z.boolean(),
-  advance_label: z.string().optional(),
+  advance_label: z.string().nullable().optional(),
 });
 export type Pipeline = z.infer<typeof PipelineSchema>;
 
@@ -90,10 +90,22 @@ export const AdvancePipelineResultSchema = z.object({
 export type AdvancePipelineResult = z.infer<typeof AdvancePipelineResultSchema>;
 
 export type AdvancePipelineInput = {
-  date?: string;
-  from_stage: PipelineStage;
-  to_stage: PipelineStage;
+  date: string;
+  from_stage: 'locked' | 'dispatch';
+  to_stage: 'dispatch' | 'delivered';
 };
+
+/**
+ * Dispatch and Delivered are admin status changes only.
+ * The pipeline endpoint requires the loaded ops date plus the current stage.
+ */
+export function pipelineAdvanceInput(date: string, stage: string): AdvancePipelineInput | null {
+  const day = date.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  if (stage === 'locked') return { date: day, from_stage: 'locked', to_stage: 'dispatch' };
+  if (stage === 'dispatch') return { date: day, from_stage: 'dispatch', to_stage: 'delivered' };
+  return null;
+}
 
 export type CreditIssueInput = {
   credit_sar: number;

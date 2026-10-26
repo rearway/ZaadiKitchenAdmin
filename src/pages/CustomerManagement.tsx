@@ -10,19 +10,15 @@ import {
 } from '@/features/customers/api/customers.queries';
 import CustomerIssueHistory from '@/features/customers/components/CustomerIssueHistory';
 import {
+  CUSTOMER_LIST_STATUS_FILTERS,
   SUBSCRIPTION_STATUS_LABEL,
   SUBSCRIPTION_STATUS_COLOR,
   SUBSCRIPTION_STATUS_AVATAR,
+  formatDaysLeft,
+  formatMealsLeft,
+  formatWalletSar,
   type SubscriptionStatus,
 } from '@/features/customers/model/customers.schema';
-
-const STATUS_FILTERS = [
-  { key: 'all', label: 'All' },
-  { key: 'active', label: 'Active' },
-  { key: 'paused', label: 'Paused' },
-  { key: 'expired', label: 'Expired' },
-  { key: 'churned', label: 'Churned' },
-] as const;
 
 export default function CustomerManagement() {
   const [searchParams] = useSearchParams();
@@ -41,7 +37,7 @@ export default function CustomerManagement() {
   const [creditNote, setCreditNote] = useState('');
   const [inputValue, setInputValue] = useState('');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [pickedStatus, setPickedStatus] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -54,22 +50,28 @@ export default function CustomerManagement() {
     return () => clearTimeout(id);
   }, [inputValue]);
 
-  useEffect(() => {
-    if (urlStatus && STATUS_FILTERS.some((f) => f.key === urlStatus)) {
-      setStatusFilter(urlStatus);
-      setPage(1);
-    }
-  }, [urlStatus]);
+  const statusFromUrl =
+    urlStatus &&
+    urlStatus !== 'churned' &&
+    CUSTOMER_LIST_STATUS_FILTERS.some((filter) => filter.key === urlStatus)
+      ? urlStatus
+      : undefined;
+  const statusFilter = pickedStatus ?? statusFromUrl ?? 'all';
 
   const { data: customerData, isLoading } = useCustomers({
     search: search || undefined,
-    status: urlStatus ?? (statusFilter === 'all' ? undefined : statusFilter),
+    status: statusFilter === 'all' ? undefined : statusFilter,
     filter: urlFilter,
     plan: urlPlan,
     page,
   });
 
-  const { data: detail, isLoading: detailLoading } = useCustomerDetail(expandedId ?? '');
+  const {
+    data: detail,
+    isLoading: detailLoading,
+    isError: isDetailError,
+    error: detailError,
+  } = useCustomerDetail(expandedId ?? '');
   const {
     data: history,
     isLoading: historyLoading,
@@ -221,11 +223,11 @@ export default function CustomerManagement() {
         />
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {STATUS_FILTERS.map((f) => (
+          {CUSTOMER_LIST_STATUS_FILTERS.map((f) => (
             <button
               key={f.key}
               onClick={() => {
-                setStatusFilter(f.key);
+                setPickedStatus(f.key);
                 setPage(1);
               }}
               style={{
@@ -257,16 +259,19 @@ export default function CustomerManagement() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {customers.map((c) => {
             const isExpanded = expandedId === c.id;
-            const isChurned = c.subscriptionStatus === 'churned';
+            const subscriptionStatus =
+              isExpanded && detail ? detail.subscriptionStatus : c.subscriptionStatus;
+            const daysLeft = isExpanded && detail ? detail.daysLeft : c.daysLeft;
+            const mealsLeft = isExpanded && detail ? detail.mealsLeft : c.mealsLeft;
+            const isChurned = subscriptionStatus === 'churned';
             const statusStyle = SUBSCRIPTION_STATUS_COLOR[
-              c.subscriptionStatus as SubscriptionStatus
+              subscriptionStatus as SubscriptionStatus
             ] ?? {
               bg: '#333',
               color: '#FFF',
             };
             const avatarColor =
-              SUBSCRIPTION_STATUS_AVATAR[c.subscriptionStatus as SubscriptionStatus] ??
-              'var(--ops)';
+              SUBSCRIPTION_STATUS_AVATAR[subscriptionStatus as SubscriptionStatus] ?? 'var(--ops)';
             const initial = c.name ? c.name[0].toUpperCase() : '?';
             const showCreditForm = creditId === c.id;
             const showDeactivateConfirm = confirmDeactivateId === c.id;
@@ -352,8 +357,8 @@ export default function CustomerManagement() {
                         color: statusStyle.color,
                       }}
                     >
-                      {SUBSCRIPTION_STATUS_LABEL[c.subscriptionStatus as SubscriptionStatus] ??
-                        c.subscriptionStatus}
+                      {SUBSCRIPTION_STATUS_LABEL[subscriptionStatus as SubscriptionStatus] ??
+                        subscriptionStatus}
                     </span>
                   </div>
 
@@ -363,14 +368,14 @@ export default function CustomerManagement() {
                       color: '#9CA3AF',
                       textAlign: 'right',
                       marginRight: '16px',
+                      flexShrink: 0,
                     }}
                   >
-                    {c.phone}
-                    {c.endDate
-                      ? ` · ends ${c.endDate}`
-                      : c.daysLeft > 0
-                        ? ` · ${c.daysLeft} days left`
-                        : ''}
+                    <div>{c.phone}</div>
+                    <div>{formatDaysLeft(daysLeft)}</div>
+                    <div style={{ fontSize: '13px', color: '#6B7280' }}>
+                      {formatMealsLeft(mealsLeft)}
+                    </div>
                   </div>
 
                   <div
@@ -397,6 +402,12 @@ export default function CustomerManagement() {
                       <div style={{ color: '#9CA3AF', fontSize: '14px', padding: '16px 0' }}>
                         Loading details…
                       </div>
+                    ) : isDetailError || !detail ? (
+                      <div style={{ color: 'var(--danger)', fontSize: '14px', padding: '16px 0' }}>
+                        {detailError instanceof Error
+                          ? detailError.message
+                          : 'Failed to load customer details.'}
+                      </div>
                     ) : (
                       <>
                         <div
@@ -409,30 +420,24 @@ export default function CustomerManagement() {
                         >
                           <InfoCard
                             label="Plan"
-                            value={detail?.plan || c.plan || '—'}
-                            sub={
-                              detail?.planEndDate
-                                ? `Ends ${detail.planEndDate}`
-                                : `${c.daysLeft} days left`
-                            }
+                            value={detail.plan || c.plan || '—'}
+                            sub={formatDaysLeft(detail.daysLeft)}
+                            sub2={formatMealsLeft(detail.mealsLeft)}
                           />
                           <InfoCard
                             label="Wallet"
-                            value={`SAR ${(detail?.walletBalance ?? c.walletBalance).toFixed(2)}`}
+                            value={formatWalletSar(detail.walletBalance)}
                             sub="Credit balance"
                             valueColor="var(--danger)"
                           />
                           <InfoCard
                             label="Address"
-                            value={(detail?.primaryAddress ?? '').split(',')[0].trim() || '—'}
-                            sub={
-                              (detail?.primaryAddress ?? '').split(',').slice(1).join(',').trim() ||
-                              ''
-                            }
+                            value={detail.primaryAddress.split(',')[0]?.trim() || '—'}
+                            sub={detail.primaryAddress.split(',').slice(1).join(',').trim()}
                           />
                           <InfoCard
                             label="Issues"
-                            value={detail ? `${detail.openIssueCount} open` : '—'}
+                            value={`${detail.openIssueCount} open`}
                             sub="Support tickets"
                           />
                         </div>
@@ -787,10 +792,11 @@ type InfoCardProps = {
   label: string;
   value: string;
   sub: string;
+  sub2?: string;
   valueColor?: string;
 };
 
-function InfoCard({ label, value, sub, valueColor = '#FFF' }: InfoCardProps) {
+function InfoCard({ label, value, sub, sub2, valueColor = '#FFF' }: InfoCardProps) {
   return (
     <div
       style={{
@@ -807,6 +813,9 @@ function InfoCard({ label, value, sub, valueColor = '#FFF' }: InfoCardProps) {
         {value}
       </div>
       <div style={{ fontSize: '13px', color: '#6B7280' }}>{sub}</div>
+      {sub2 ? (
+        <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '2px' }}>{sub2}</div>
+      ) : null}
     </div>
   );
 }
