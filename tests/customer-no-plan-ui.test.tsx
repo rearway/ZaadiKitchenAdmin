@@ -191,11 +191,20 @@ describe('customer list plan copy', () => {
     assert.match(theon, /17 meals left/);
 
     const nora = html.slice(html.indexOf('Nora Ali'));
-    assert.match(nora, /Month Plan/);
-    assert.match(nora, /Active/);
-    assert.match(nora, /var\(--grn\)/);
+    const noraColumn = nora.slice(nora.indexOf('flex-direction:column'));
+    assert.ok(noraColumn.indexOf('Month Plan') < noraColumn.indexOf('>Active<'));
+    assert.match(noraColumn, /var\(--grn\)/);
+    assert.equal(nora.includes('Month Plan · Active'), false);
+    assert.equal(nora.includes('·'), false);
     assert.match(nora, /17 days left/);
     assert.match(nora, /17 meals left/);
+
+    const nedColumn = ned.slice(
+      ned.indexOf('flex-direction:column'),
+      ned.indexOf('Not subscribed') + 'Not subscribed'.length
+    );
+    assert.match(nedColumn, /Not subscribed/);
+    assert.equal(nedColumn.includes('font-size:14px'), false);
     queryClient.clear();
   });
 });
