@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useSessionStore } from '@/store/useSessionStore';
 import {
@@ -9,6 +9,7 @@ import {
   useCreditWallet,
 } from '@/features/customers/api/customers.queries';
 import CustomerIssueHistory from '@/features/customers/components/CustomerIssueHistory';
+import PlanStatusLines from '@/features/customers/components/PlanStatusLines';
 import {
   ACCOUNT_STATUS_COLOR,
   ACCOUNT_STATUS_LABEL,
@@ -341,41 +342,13 @@ export default function CustomerManagement() {
                       {c.name}
                     </h4>
 
-                    {presentation.showPlanName ? (
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          width: '200px',
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: '12px',
-                            height: '12px',
-                            borderRadius: '50%',
-                            backgroundColor: 'var(--danger)',
-                          }}
-                        />
-                        <span style={{ fontSize: '14px', color: '#D1D5DB' }}>
-                          {presentation.planLabel}
-                        </span>
-                      </div>
-                    ) : null}
-
-                    <span
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: '16px',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        backgroundColor: statusStyle.bg,
-                        color: statusStyle.color,
-                      }}
-                    >
-                      {presentation.statusLabel}
-                    </span>
+                    <PlanStatusLines
+                      variant="list"
+                      planLabel={presentation.planLabel}
+                      showPlanName={presentation.showPlanName}
+                      statusLabel={presentation.statusLabel}
+                      statusStyle={statusStyle}
+                    />
                     <AccountBadge status={accountStatus} />
                   </div>
 
@@ -442,12 +415,15 @@ export default function CustomerManagement() {
                         >
                           <InfoCard
                             label="Plan"
-                            value={
-                              presentation.showPlanName
-                                ? presentation.planLabel
-                                : presentation.statusLabel
+                            extra={
+                              <PlanStatusLines
+                                variant="detail"
+                                planLabel={presentation.planLabel}
+                                showPlanName={presentation.showPlanName}
+                                statusLabel={presentation.statusLabel}
+                                statusStyle={statusStyle}
+                              />
                             }
-                            valueColor={presentation.showPlanName ? '#FFF' : statusStyle.color}
                             sub={presentation.showDays ? presentation.daysLabel : undefined}
                             sub2={presentation.showMeals ? presentation.mealsLabel : undefined}
                           />
@@ -847,13 +823,14 @@ function AccountBadge({ status }: { status: AccountStatus }) {
 
 type InfoCardProps = {
   label: string;
-  value: string;
+  value?: string;
+  extra?: ReactNode;
   sub?: string;
   sub2?: string;
   valueColor?: string;
 };
 
-function InfoCard({ label, value, sub, sub2, valueColor = '#FFF' }: InfoCardProps) {
+function InfoCard({ label, value, extra, sub, sub2, valueColor = '#FFF' }: InfoCardProps) {
   return (
     <div
       style={{
@@ -866,9 +843,12 @@ function InfoCard({ label, value, sub, sub2, valueColor = '#FFF' }: InfoCardProp
       <div style={{ fontSize: '12px', color: '#9CA3AF', marginBottom: '8px', fontWeight: 600 }}>
         {label}
       </div>
-      <div style={{ fontSize: '16px', fontWeight: 600, color: valueColor, marginBottom: '4px' }}>
-        {value}
-      </div>
+      {value ? (
+        <div style={{ fontSize: '16px', fontWeight: 600, color: valueColor, marginBottom: '4px' }}>
+          {value}
+        </div>
+      ) : null}
+      {extra}
       {sub ? <div style={{ fontSize: '13px', color: '#6B7280' }}>{sub}</div> : null}
       {sub2 ? (
         <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '2px' }}>{sub2}</div>
