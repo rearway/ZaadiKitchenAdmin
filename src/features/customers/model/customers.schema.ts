@@ -1,6 +1,175 @@
 import { z } from 'zod';
 
-export type SubscriptionStatus = 'active' | 'paused' | 'expired' | 'churned';
+export type SubscriptionStatus = 'active' | 'paused' | 'expired' | 'cancelled' | 'churned';
+
+/** Users list filters. Churned is not a list filter. */
+export const CUSTOMER_LIST_STATUS_FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'active', label: 'Active' },
+  { key: 'paused', label: 'Paused' },
+  { key: 'expired', label: 'Expired' },
+] as const;
+
+const KNOWN_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus>([
+  'active',
+  'paused',
+  'expired',
+  'cancelled',
+  'churned',
+]);
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function coerceNumber(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string' && value.trim()) {
+    const amount = Number(value.trim());
+    return Number.isFinite(amount) ? amount : null;
+  }
+  return null;
+}
+
+function firstNumber(source: Record<string, unknown>, keys: string[]): number | null {
+  for (const key of keys) {
+    if (!(key in source)) continue;
+    const amount = coerceNumber(source[key]);
+    if (amount != null) return amount;
+  }
+  return null;
+}
+
+function text(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+/**
+ * Live wallet is the ledger sum mobile returns as `balance_sar`
+ * (`walletBalanceSar` on admin customer detail). A missing field stays null
+ * so the screen does not paint a fake SAR 0.00.
+ */
+export function readWalletBalance(source: unknown): number | null {
+  const row = asRecord(source);
+  if (!row) return null;
+  const direct = firstNumber(row, [
+    'walletBalanceSar',
+    'wallet_balance_sar',
+    'walletBalance',
+    'wallet_balance',
+  ]);
+  if (direct != null) return direct;
+  const wallet = asRecord(row.wallet);
+  if (!wallet) return null;
+  return firstNumber(wallet, ['balance_sar', 'balanceSar', 'balance']);
+}
+
+/**
+ * Status is the subscription's stored status. A past `endDate` must not turn
+ * `active` into Expired — mobile keeps `active` until the row's status changes.
+ * Calendar `daysRemaining` is not a status.
+ */
+export function resolveSubscriptionStatus(source: unknown): SubscriptionStatus {
+  const row = asRecord(source);
+  if (!row) return 'active';
+  const subscription = asRecord(row.subscription);
+  const raw =
+    subscription?.status ?? row.subscriptionStatus ?? row.subscription_status ?? row.status;
+  const normalized = typeof raw === 'string' ? raw.trim().toLowerCase() : '';
+  if (KNOWN_SUBSCRIPTION_STATUSES.has(normalized as SubscriptionStatus)) {
+    return normalized as SubscriptionStatus;
+  }
+  return 'active';
+}
+
+/**
+ * Mobile days left and meals left are both
+ * `max(0, totalMealDays - deliveredCount - skippedCount)`.
+ * Admin `subscription.daysRemaining` is calendar days until `endDate` and is ignored.
+ */
+export function resolveMealAllowance(source: unknown): {
+  daysLeft: number | null;
+  mealsLeft: number | null;
+} {
+  const row = asRecord(source) ?? {};
+  const subscription = asRecord(row.subscription) ?? {};
+  const total =
+    firstNumber(row, ['totalMealDays', 'total_meal_days']) ??
+    firstNumber(subscription, ['totalMealDays', 'total_meal_days']);
+  const delivered =
+    firstNumber(row, ['deliveredCount', 'delivered_count']) ??
+    firstNumber(subscription, ['deliveredCount', 'delivered_count']);
+  const skipped =
+    firstNumber(row, ['skippedCount', 'skipped_count']) ??
+    firstNumber(subscription, ['skippedCount', 'skipped_count']);
+  const computed =
+    total != null && delivered != null && skipped != null
+      ? Math.max(0, total - delivered - skipped)
+      : null;
+  const explicitDays =
+    firstNumber(row, ['days_remaining', 'daysLeft', 'days_left']) ??
+    firstNumber(subscription, ['days_remaining', 'daysLeft', 'days_left']);
+  const explicitMeals =
+    firstNumber(row, ['mealsLeft', 'meals_left', 'remaining_count', 'remainingCount']) ??
+    firstNumber(subscription, ['mealsLeft', 'meals_left', 'remaining_count', 'remainingCount']);
+  const daysLeft = explicitDays ?? computed;
+  return { daysLeft, mealsLeft: explicitMeals ?? daysLeft };
+}
+
+export function formatWalletSar(amount: number | null): string {
+  if (amount == null) return '—';
+  return `SAR ${amount.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+export function formatDaysLeft(value: number | null): string {
+  if (value == null) return '— days left';
+  return `${value} ${value === 1 ? 'day' : 'days'} left`;
+}
+
+export function formatMealsLeft(value: number | null): string {
+  if (value == null) return '— meals left';
+  return `${value} ${value === 1 ? 'meal' : 'meals'} left`;
+}
+
+function formatPrimaryAddress(value: unknown): string {
+  if (typeof value === 'string') return value.trim();
+  const row = asRecord(value);
+  if (!row) return '';
+  const building = text(row.buildingName ?? row.building_name);
+  const floor = text(row.floor);
+  const area = text(row.areaName ?? row.area_name);
+  const line = text(row.line ?? row.address);
+  if (line && !building && !area) return line;
+  return [building, floor ? `Floor ${floor}` : '', area].filter(Boolean).join(', ');
+}
+
+function readPlan(source: Record<string, unknown>): string {
+  const subscription = asRecord(source.subscription);
+  return (
+    text(source.plan) ||
+    text(source.planName) ||
+    text(source.plan_name) ||
+    text(subscription?.planName) ||
+    text(subscription?.plan_name) ||
+    text(subscription?.plan)
+  );
+}
+
+function readEndDate(source: Record<string, unknown>): string | null {
+  const subscription = asRecord(source.subscription);
+  const value =
+    text(source.endDate) ||
+    text(source.end_date) ||
+    text(source.planEndDate) ||
+    text(source.plan_end_date) ||
+    text(subscription?.endDate) ||
+    text(subscription?.end_date);
+  return value || null;
+}
 
 export const CustomerSchema = z
   .object({
@@ -9,41 +178,22 @@ export const CustomerSchema = z
     fullName: z.string().optional().nullable(),
     phone: z.string().optional().nullable(),
     email: z.string().optional().nullable(),
-    subscriptionStatus: z.string().optional().nullable(),
-    subscription_status: z.string().optional().nullable(),
-    status: z.string().optional().nullable(),
-    isActive: z.boolean().optional(),
-    plan: z.string().optional().nullable(),
-    planName: z.string().optional().nullable(),
-    plan_name: z.string().optional().nullable(),
-    endDate: z.string().optional().nullable(),
-    end_date: z.string().optional().nullable(),
-    daysLeft: z.number().optional().nullable(),
-    days_left: z.number().optional().nullable(),
-    walletBalance: z.number().optional().nullable(),
-    wallet_balance: z.number().optional().nullable(),
     createdAt: z.string().optional(),
   })
+  .passthrough()
   .transform((c) => {
-    const rawStatus = c.subscriptionStatus ?? c.subscription_status ?? c.status ?? 'active';
-    const endDate = c.endDate ?? c.end_date ?? null;
-    const daysLeft =
-      c.daysLeft ??
-      c.days_left ??
-      (() => {
-        if (!endDate) return 0;
-        return Math.max(0, Math.ceil((new Date(endDate).getTime() - Date.now()) / 86_400_000));
-      })();
+    const allowance = resolveMealAllowance(c);
     return {
       id: c.id,
-      name: c.name ?? c.fullName ?? '',
-      phone: c.phone ?? '',
-      email: c.email ?? '',
-      subscriptionStatus: (rawStatus ?? 'active').toLowerCase() as SubscriptionStatus,
-      plan: c.plan ?? c.planName ?? c.plan_name ?? '',
-      endDate,
-      daysLeft,
-      walletBalance: c.walletBalance ?? c.wallet_balance ?? 0,
+      name: text(c.name) || text(c.fullName),
+      phone: text(c.phone),
+      email: text(c.email),
+      subscriptionStatus: resolveSubscriptionStatus(c),
+      plan: readPlan(c),
+      endDate: readEndDate(c),
+      daysLeft: allowance.daysLeft,
+      mealsLeft: allowance.mealsLeft,
+      walletBalance: readWalletBalance(c),
     };
   });
 export type Customer = z.infer<typeof CustomerSchema>;
@@ -88,40 +238,26 @@ export const CustomerDetailSchema = z
     fullName: z.string().optional().nullable(),
     phone: z.string().optional().nullable(),
     email: z.string().optional().nullable(),
-    subscriptionStatus: z.string().optional().nullable(),
-    subscription_status: z.string().optional().nullable(),
-    status: z.string().optional().nullable(),
-    plan: z.string().optional().nullable(),
-    planName: z.string().optional().nullable(),
-    plan_name: z.string().optional().nullable(),
-    planEndDate: z.string().optional().nullable(),
-    plan_end_date: z.string().optional().nullable(),
-    endDate: z.string().optional().nullable(),
-    end_date: z.string().optional().nullable(),
-    walletBalance: z.number().optional().nullable(),
-    wallet_balance: z.number().optional().nullable(),
-    primaryAddress: z.string().optional().nullable(),
-    primary_address: z.string().optional().nullable(),
-    address: z.string().optional().nullable(),
     openIssueCount: z.number().optional().nullable(),
     open_issue_count: z.number().optional().nullable(),
-    daysLeft: z.number().optional().nullable(),
-    days_left: z.number().optional().nullable(),
   })
+  .passthrough()
   .transform((c) => {
-    const rawStatus = c.subscriptionStatus ?? c.subscription_status ?? c.status ?? 'active';
+    const allowance = resolveMealAllowance(c);
+    const address = formatPrimaryAddress(c.primaryAddress ?? c.primary_address ?? c.address);
     return {
       id: c.id,
-      name: c.name ?? c.fullName ?? '',
-      phone: c.phone ?? '',
-      email: c.email ?? '',
-      subscriptionStatus: (rawStatus ?? 'active').toLowerCase() as SubscriptionStatus,
-      plan: c.plan ?? c.planName ?? c.plan_name ?? '',
-      planEndDate: c.planEndDate ?? c.plan_end_date ?? c.endDate ?? c.end_date ?? null,
-      walletBalance: c.walletBalance ?? c.wallet_balance ?? 0,
-      primaryAddress: c.primaryAddress ?? c.primary_address ?? c.address ?? '',
+      name: text(c.name) || text(c.fullName),
+      phone: text(c.phone),
+      email: text(c.email),
+      subscriptionStatus: resolveSubscriptionStatus(c),
+      plan: readPlan(c),
+      planEndDate: readEndDate(c),
+      walletBalance: readWalletBalance(c),
+      primaryAddress: address,
       openIssueCount: c.openIssueCount ?? c.open_issue_count ?? 0,
-      daysLeft: c.daysLeft ?? c.days_left ?? 0,
+      daysLeft: allowance.daysLeft,
+      mealsLeft: allowance.mealsLeft,
     };
   });
 export type CustomerDetail = z.infer<typeof CustomerDetailSchema>;
@@ -331,6 +467,7 @@ export const SUBSCRIPTION_STATUS_LABEL: Record<SubscriptionStatus, string> = {
   active: 'Active',
   paused: 'Paused',
   expired: 'Expired',
+  cancelled: 'Cancelled',
   churned: 'Churned',
 };
 
@@ -339,6 +476,7 @@ export const SUBSCRIPTION_STATUS_COLOR: Record<SubscriptionStatus, { bg: string;
     active: { bg: 'rgba(228,40,29,0.10)', color: 'var(--danger)' },
     paused: { bg: 'rgba(139,92,246,0.1)', color: 'var(--ops)' },
     expired: { bg: 'rgba(255,115,64,0.1)', color: 'var(--danger)' },
+    cancelled: { bg: 'rgba(107,114,128,0.1)', color: '#9CA3AF' },
     churned: { bg: 'rgba(107,114,128,0.1)', color: '#9CA3AF' },
   };
 
@@ -346,5 +484,6 @@ export const SUBSCRIPTION_STATUS_AVATAR: Record<SubscriptionStatus, string> = {
   active: 'var(--ops)',
   paused: 'var(--danger)',
   expired: '#F59E0B',
+  cancelled: '#6B7280',
   churned: '#6B7280',
 };

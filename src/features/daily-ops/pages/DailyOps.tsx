@@ -11,8 +11,8 @@ import { useExportDailyOps } from '@/features/labels/api/labels.queries';
 import {
   REJECT_REASONS,
   creditPrefillSar,
+  pipelineAdvanceInput,
   type Issue,
-  type PipelineStage,
 } from '../model/daily-ops.schema';
 import CreditModal from '../components/CreditModal';
 import OpenIssuesColumn from '../components/OpenIssuesColumn';
@@ -92,18 +92,13 @@ export default function DailyOps() {
 
   const handleAdvance = () => {
     if (!dailyOps) return;
-    const stages = dailyOps.pipeline.stages.map((s) => s.id as PipelineStage);
-    const currentIndex = stages.indexOf(dailyOps.pipeline.stage);
-    const nextStage = stages[currentIndex + 1];
-    if (!nextStage) return;
+    const input = pipelineAdvanceInput(dailyOps.date, dailyOps.pipeline.stage);
+    if (!input) return;
     setErrorMsg(null);
-    advancePipeline.mutate(
-      { from_stage: dailyOps.pipeline.stage, to_stage: nextStage },
-      {
-        onError: (err) =>
-          setErrorMsg(err instanceof ApiError ? err.message : 'Failed to advance pipeline'),
-      }
-    );
+    advancePipeline.mutate(input, {
+      onError: (err) =>
+        setErrorMsg(err instanceof ApiError ? err.message : 'Failed to advance pipeline'),
+    });
   };
 
   if (isLoading) {
