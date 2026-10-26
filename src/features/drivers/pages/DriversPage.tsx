@@ -2,15 +2,26 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useAreas } from '@/features/areas';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { ApiError } from '@/shared/types/api';
+import AssignDriverAreaDialog from '../components/AssignDriverAreaDialog';
 import DeleteDriverDialog from '../components/DeleteDriverDialog';
+import DriverDeliveriesPanel from '../components/DriverDeliveriesPanel';
 import DriverFormSheet from '../components/DriverFormSheet';
 import {
+  useAssignDriverArea,
   useCreateDriver,
   useDeleteDriver,
   useDriver,
   useDrivers,
+  useUnassignedDriverAreas,
   useUpdateDriver,
 } from '../api/drivers.queries';
+import {
+  areaAssignErrorMessage,
+  formatOpsDayLabel,
+  todayKsa,
+  unassignedAreas,
+  type AreaChoice,
+} from '../model/driver-deliveries.schema';
 import {
   driverAreaLabels,
   filterDrivers,
@@ -34,25 +45,59 @@ export default function DriversPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [deliveryDate, setDeliveryDate] = useState(todayKsa);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [assignFor, setAssignFor] = useState<Driver | null>(null);
+  const [assignError, setAssignError] = useState<string | null>(null);
 
   const list = useDrivers();
   const detail = useDriver(editingId);
   const areasQuery = useAreas();
+  const unassignedQuery = useUnassignedDriverAreas();
   const createDriver = useCreateDriver();
   const updateDriver = useUpdateDriver();
   const deleteDriver = useDeleteDriver();
+  const assignArea = useAssignDriverArea();
 
-  const areas = areasQuery.data ?? [];
+  const areas = useMemo(() => areasQuery.data ?? [], [areasQuery.data]);
   const areaNameById = useMemo(
     () => new Map((areasQuery.data ?? []).map((area) => [area.id, area.name])),
     [areasQuery.data]
   );
 
-  const drivers = list.data?.drivers ?? [];
+  const drivers = useMemo(() => list.data?.drivers ?? [], [list.data]);
   const visibleDrivers = useMemo(
     () => filterDrivers(list.data?.drivers ?? [], debouncedQ),
     [list.data, debouncedQ]
   );
+  const areaChoices = useMemo<AreaChoice[]>(
+    () => areas.map((area) => ({ id: area.id, name: area.name })),
+    [areas]
+  );
+  const freeAreas = useMemo(() => {
+    if (unassignedQuery.data?.available) return unassignedQuery.data.areas;
+    return unassignedAreas(areaChoices, drivers);
+  }, [unassignedQuery.data, areaChoices, drivers]);
+  const takenAreaIds = useMemo(() => {
+    const ownAreas = editingId
+      ? (drivers.find((driver) => driver.id === editingId)?.areas ?? [])
+      : [];
+    const ownIds = new Set(ownAreas.map((area) => area.id));
+    if (unassignedQuery.data?.available) {
+      const freeIds = new Set(unassignedQuery.data.areas.map((area) => area.id));
+      const taken = new Set<string>();
+      for (const area of areas) {
+        if (!freeIds.has(area.id) && !ownIds.has(area.id)) taken.add(area.id);
+      }
+      return taken;
+    }
+    const taken = new Set<string>();
+    for (const driver of drivers) {
+      if (editingId && driver.id === editingId) continue;
+      for (const area of driver.areas) taken.add(area.id);
+    }
+    return taken;
+  }, [unassignedQuery.data, areas, drivers, editingId]);
   const isSaving = createDriver.isPending || updateDriver.isPending;
 
   const closeEditor = () => {
@@ -71,7 +116,10 @@ export default function DriversPage() {
       setEditingId(null);
     };
     const onError = (err: unknown) => {
-      setFormError(messageFrom(err, 'Failed to save driver.'));
+      const conflict = areaAssignErrorMessage(err);
+      const message = conflict ?? messageFrom(err, 'Failed to save driver.');
+      setFormError(message);
+      if (conflict) setErrorMsg(message);
     };
     if (creating) {
       createDriver.mutate(
@@ -82,6 +130,31 @@ export default function DriversPage() {
     }
     if (!editingId || !('is_active' in input)) return;
     updateDriver.mutate({ driverId: editingId, input }, { onSuccess, onError });
+  };
+
+  const handleAssign = (areaId: string) => {
+    if (!assignFor) return;
+    setAssignError(null);
+    setErrorMsg(null);
+    const driver = assignFor;
+    assignArea.mutate(
+      { driverId: driver.id, areaId },
+      {
+        onSuccess: () => {
+          const areaName = freeAreas.find((area) => area.id === areaId)?.name ?? 'Area';
+          const driverName = driver.fullName || driver.phone;
+          setSuccessMsg(`${areaName} assigned to ${driverName}.`);
+          setAssignFor(null);
+          setAssignError(null);
+        },
+        onError: (err) => {
+          const conflict = areaAssignErrorMessage(err);
+          const message = conflict ?? messageFrom(err, 'Failed to assign area.');
+          setAssignError(message);
+          setErrorMsg(message);
+        },
+      }
+    );
   };
 
   const handleDelete = () => {
@@ -156,14 +229,42 @@ export default function DriversPage() {
         </Banner>
       )}
 
-      <input
-        type="search"
-        placeholder="Search by name or phone…"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        aria-label="Search drivers"
-        style={{ width: '100%', maxWidth: '400px', backgroundColor: 'var(--blk3)' }}
-      />
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 'var(--space-12)',
+          alignItems: 'center',
+        }}
+      >
+        <input
+          type="search"
+          placeholder="Search by name or phone…"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          aria-label="Search drivers"
+          style={{ width: '100%', maxWidth: '400px', backgroundColor: 'var(--blk3)' }}
+        />
+        <label
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 'var(--space-8)',
+            color: 'var(--soft)',
+            fontSize: 'var(--text-14)',
+          }}
+        >
+          <span>Delivery date</span>
+          <input
+            type="date"
+            className="drivers-date-input"
+            value={deliveryDate}
+            aria-label="Delivery date"
+            onChange={(event) => setDeliveryDate(event.target.value || todayKsa())}
+          />
+          <span>{formatOpsDayLabel(deliveryDate)}</span>
+        </label>
+      </div>
 
       {list.isLoading && (
         <div style={{ padding: 'var(--space-32)', textAlign: 'center', color: 'var(--soft)' }}>
@@ -229,6 +330,14 @@ export default function DriversPage() {
               key={driver.id}
               driver={driver}
               areaLabels={driverAreaLabels(driver, areaNameById)}
+              isExpanded={expandedId === driver.id}
+              deliveryDate={deliveryDate}
+              onToggle={() => setExpandedId(expandedId === driver.id ? null : driver.id)}
+              onAssign={() => {
+                setAssignError(null);
+                setErrorMsg(null);
+                setAssignFor(driver);
+              }}
               onEdit={() => {
                 setErrorMsg(null);
                 setFormError(null);
@@ -249,6 +358,7 @@ export default function DriversPage() {
           mode="create"
           driver={null}
           areas={areas}
+          takenAreaIds={takenAreaIds}
           areasLoading={areasQuery.isLoading}
           areasError={
             areasQuery.isError ? messageFrom(areasQuery.error, 'Failed to load areas.') : null
@@ -275,6 +385,7 @@ export default function DriversPage() {
           mode="edit"
           driver={detail.data}
           areas={areas}
+          takenAreaIds={takenAreaIds}
           areasLoading={areasQuery.isLoading}
           areasError={
             areasQuery.isError ? messageFrom(areasQuery.error, 'Failed to load areas.') : null
@@ -283,6 +394,23 @@ export default function DriversPage() {
           isPending={isSaving}
           onClose={closeEditor}
           onSubmit={handleSubmit}
+        />
+      )}
+
+      {assignFor && (
+        <AssignDriverAreaDialog
+          driverName={assignFor.fullName || assignFor.phone || 'this driver'}
+          areas={freeAreas}
+          isLoading={areasQuery.isLoading && !unassignedQuery.data}
+          error={assignError}
+          isPending={assignArea.isPending}
+          onClose={() => {
+            if (!assignArea.isPending) {
+              setAssignFor(null);
+              setAssignError(null);
+            }
+          }}
+          onAssign={handleAssign}
         />
       )}
 
@@ -303,70 +431,128 @@ export default function DriversPage() {
 function DriverRow({
   driver,
   areaLabels,
+  isExpanded,
+  deliveryDate,
+  onToggle,
+  onAssign,
   onEdit,
   onDelete,
 }: {
   driver: Driver;
   areaLabels: string[];
+  isExpanded: boolean;
+  deliveryDate: string;
+  onToggle: () => void;
+  onAssign: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   return (
     <div
       style={{
-        display: 'grid',
-        gridTemplateColumns: DRIVER_COLUMNS,
-        gap: 'var(--space-12)',
-        padding: 'var(--space-16) var(--space-20)',
         borderBottom: '1px solid var(--surface)',
-        alignItems: 'center',
-        fontSize: 'var(--text-14)',
+        borderInlineStart: isExpanded ? '4px solid var(--danger)' : '4px solid transparent',
         minWidth: '760px',
       }}
     >
-      <div style={{ fontWeight: 600, color: 'var(--white)' }}>{driver.fullName || '—'}</div>
-      <span dir="ltr" style={{ color: 'var(--text-3)' }}>
-        {driver.phone || '—'}
-      </span>
-      <span style={{ color: areaLabels.length ? 'var(--text-3)' : 'var(--mid)' }}>
-        {areaLabels.length ? areaLabels.join(', ') : 'Unassigned'}
-      </span>
-      <span
+      <div
+        onClick={onToggle}
         style={{
-          color: driver.isActive ? 'var(--grn)' : 'var(--mid)',
-          fontWeight: 600,
-          fontSize: 'var(--text-13)',
+          display: 'grid',
+          gridTemplateColumns: DRIVER_COLUMNS,
+          gap: 'var(--space-12)',
+          padding: 'var(--space-16) var(--space-20)',
+          alignItems: 'center',
+          fontSize: 'var(--text-14)',
+          cursor: 'pointer',
+          backgroundColor: isExpanded ? 'var(--surface)' : 'transparent',
         }}
       >
-        {driver.isActive ? 'Active' : 'Inactive'}
-      </span>
-      <div style={{ display: 'flex', gap: 'var(--space-8)', justifyContent: 'flex-end' }}>
-        <button
-          type="button"
-          className="btn-ghost"
+        <div
           style={{
-            padding: 'var(--space-6) var(--space-10)',
-            fontSize: 'var(--text-13)',
-            border: '1px solid var(--border-ui)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-8)',
+            fontWeight: 600,
+            color: 'var(--white)',
           }}
-          onClick={onEdit}
         >
-          Edit
-        </button>
-        <button
-          type="button"
-          className="btn-ghost"
+          <button
+            type="button"
+            aria-expanded={isExpanded}
+            aria-label={`${isExpanded ? 'Hide' : 'Show'} deliveries for ${driver.fullName || driver.phone || 'driver'}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggle();
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              color: 'var(--soft)',
+              transform: isExpanded ? 'rotate(90deg)' : 'none',
+              transition: 'transform 0.2s',
+              fontSize: 'var(--text-12)',
+              cursor: 'pointer',
+              lineHeight: 1,
+            }}
+          >
+            ▶
+          </button>
+          <span>{driver.fullName || '—'}</span>
+        </div>
+        <span dir="ltr" style={{ color: 'var(--text-3)' }}>
+          {driver.phone || '—'}
+        </span>
+        <span style={{ color: areaLabels.length ? 'var(--text-3)' : 'var(--mid)' }}>
+          {areaLabels.length ? areaLabels.join(', ') : 'Unassigned'}
+        </span>
+        <span
           style={{
-            padding: 'var(--space-6) var(--space-10)',
+            color: driver.isActive ? 'var(--grn)' : 'var(--mid)',
+            fontWeight: 600,
             fontSize: 'var(--text-13)',
-            color: 'var(--text-err)',
-            border: '1px solid var(--danger-a30)',
           }}
-          onClick={onDelete}
         >
-          Delete
-        </button>
+          {driver.isActive ? 'Active' : 'Inactive'}
+        </span>
+        <div style={{ display: 'flex', gap: 'var(--space-8)', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            className="btn-ghost"
+            style={{
+              padding: 'var(--space-6) var(--space-10)',
+              fontSize: 'var(--text-13)',
+              border: '1px solid var(--border-ui)',
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+              onEdit();
+            }}
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            className="btn-ghost"
+            style={{
+              padding: 'var(--space-6) var(--space-10)',
+              fontSize: 'var(--text-13)',
+              color: 'var(--text-err)',
+              border: '1px solid var(--danger-a30)',
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+              onDelete();
+            }}
+          >
+            Delete
+          </button>
+        </div>
       </div>
+      {isExpanded && (
+        <DriverDeliveriesPanel driverId={driver.id} date={deliveryDate} onAssign={onAssign} />
+      )}
     </div>
   );
 }
@@ -422,6 +608,7 @@ function Banner({
   const isError = tone === 'error';
   return (
     <div
+      role={isError ? 'alert' : 'status'}
       style={{
         backgroundColor: isError ? 'rgba(220,38,38,0.1)' : 'rgba(0, 200, 150, 0.1)',
         border: isError ? '1px solid rgba(220,38,38,0.3)' : '1px solid rgba(0, 200, 150, 0.3)',
