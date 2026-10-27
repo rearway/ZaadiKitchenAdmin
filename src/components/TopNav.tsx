@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useSessionStore } from '@/store/useSessionStore';
 import { logoutApi } from '@/features/auth/api/auth.api';
@@ -8,6 +9,8 @@ type Props = { user: User | null };
 export default function TopNav({ user }: Props) {
   const clearSession = useSessionStore((s) => s.clearSession);
   const navigate = useNavigate();
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'short',
@@ -15,7 +18,19 @@ export default function TopNav({ user }: Props) {
     day: 'numeric',
   });
 
+  useEffect(() => {
+    if (!isAccountOpen) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!accountRef.current?.contains(event.target as Node)) {
+        setIsAccountOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [isAccountOpen]);
+
   const handleLogout = () => {
+    setIsAccountOpen(false);
     void logoutApi().finally(() => {
       clearSession();
       navigate('/login');
@@ -59,7 +74,11 @@ export default function TopNav({ user }: Props) {
                 gap: '8px',
               }}
             >
-              <img src="/brand/platio-logo-white.svg" alt="Platio" style={{ height: '20px', width: 'auto' }} />
+              <img
+                src="/brand/platio-logo-white.svg"
+                alt="Platio"
+                style={{ height: '20px', width: 'auto' }}
+              />
               Ops
             </h2>
             <nav style={{ display: 'flex', gap: '8px' }}>
@@ -86,25 +105,80 @@ export default function TopNav({ user }: Props) {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
         <span style={{ color: '#9CA3AF', fontSize: '15px' }}>{today}</span>
-        <button
-          onClick={handleLogout}
-          title="Sign out"
-          style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '50%',
-            backgroundColor: 'var(--danger)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#000',
-            fontWeight: 'bold',
-            fontSize: '14px',
-            cursor: 'pointer',
-          }}
-        >
-          {initial}
-        </button>
+        <div ref={accountRef} style={{ position: 'relative' }}>
+          <button
+            type="button"
+            aria-label="Account"
+            aria-expanded={isAccountOpen}
+            aria-haspopup="menu"
+            onClick={() => setIsAccountOpen((open) => !open)}
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--danger)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#000',
+              fontWeight: 'bold',
+              fontSize: '14px',
+              cursor: 'pointer',
+              border: 'none',
+              padding: 0,
+            }}
+          >
+            {initial}
+          </button>
+          {isAccountOpen && (
+            <div
+              role="menu"
+              style={{
+                position: 'absolute',
+                top: '44px',
+                insetInlineEnd: 0,
+                minWidth: '220px',
+                backgroundColor: 'var(--blk3)',
+                border: '1px solid #333',
+                borderRadius: '12px',
+                padding: '12px',
+                zIndex: 30,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+              }}
+            >
+              <div style={{ fontSize: '14px', fontWeight: 600, color: '#FFF' }}>
+                {user?.name || 'Account'}
+              </div>
+              {user?.email && (
+                <div style={{ fontSize: '13px', color: '#9CA3AF' }}>{user.email}</div>
+              )}
+              <div style={{ fontSize: '12px', color: '#6B7280', textTransform: 'capitalize' }}>
+                {isAdmin ? 'Admin' : 'Ops'}
+              </div>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleLogout}
+                style={{
+                  marginTop: '4px',
+                  background: 'none',
+                  border: '1px solid #333',
+                  borderRadius: '8px',
+                  color: '#F87171',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  padding: '8px 12px',
+                  cursor: 'pointer',
+                  textAlign: 'start',
+                }}
+              >
+                Sign out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

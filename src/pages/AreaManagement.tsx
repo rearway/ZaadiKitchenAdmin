@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { OutOfZoneRequestsQueue } from '@/features/areas';
-import { useAreas, useUpdateArea, useBuildings } from '@/features/areas/api/areas.queries';
+import {
+  useAreas,
+  useDeleteArea,
+  useUpdateArea,
+  useBuildings,
+} from '@/features/areas/api/areas.queries';
+import DeleteAreaDialog from '@/features/areas/components/DeleteAreaDialog';
 import {
   type Area,
   type AreaStatus,
@@ -17,10 +23,13 @@ export default function AreaManagement() {
   const [section, setSection] = useState<AreaSection>('zones');
   const [filter, setFilter] = useState<Filter>('All');
   const [editArea, setEditArea] = useState<Area | null>(null);
+  const [deleteAreaTarget, setDeleteAreaTarget] = useState<Area | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const { data: areas = [], isLoading, isError, error } = useAreas();
   const updateArea = useUpdateArea();
+  const deleteArea = useDeleteArea();
 
   const filteredAreas = areas.filter((a) => filter === 'All' || a.status === filter);
 
@@ -33,6 +42,25 @@ export default function AreaManagement() {
           setErrorMsg(err instanceof Error ? err.message : 'Failed to update area status'),
       }
     );
+  };
+
+  const handleDeleteArea = () => {
+    if (!deleteAreaTarget) return;
+    setErrorMsg(null);
+    const name = deleteAreaTarget.name || 'Area';
+    const areaId = deleteAreaTarget.id;
+    deleteArea.mutate(areaId, {
+      onSuccess: () => {
+        setSuccessMsg(`${name} removed.`);
+        setDeleteAreaTarget(null);
+        if (editArea?.id === areaId) setEditArea(null);
+      },
+      onError: (err) => {
+        setDeleteAreaTarget(null);
+        setSuccessMsg(null);
+        setErrorMsg(err instanceof Error ? err.message : 'Failed to delete area.');
+      },
+    });
   };
 
   return (
@@ -73,6 +101,39 @@ export default function AreaManagement() {
         <OutOfZoneRequestsQueue />
       ) : (
         <>
+          {successMsg && (
+            <div
+              style={{
+                backgroundColor: 'rgba(0, 200, 150, 0.1)',
+                border: '1px solid rgba(0, 200, 150, 0.3)',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                color: '#6EE7B7',
+                fontSize: '14px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <span>✓ {successMsg}</span>
+              <button
+                type="button"
+                onClick={() => setSuccessMsg(null)}
+                aria-label="Dismiss"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#9CA3AF',
+                  cursor: 'pointer',
+                  fontSize: '18px',
+                  lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            </div>
+          )}
+
           {errorMsg && (
             <div
               style={{
@@ -250,6 +311,24 @@ export default function AreaManagement() {
                     )}
 
                     <button
+                      type="button"
+                      className="btn-ghost"
+                      aria-label={`Delete ${area.name}`}
+                      style={{
+                        border: '1px solid #333',
+                        padding: '8px 16px',
+                        color: 'var(--text-err)',
+                      }}
+                      onClick={() => {
+                        setErrorMsg(null);
+                        setSuccessMsg(null);
+                        setDeleteAreaTarget(area);
+                      }}
+                    >
+                      Delete
+                    </button>
+
+                    <button
                       className="btn-primary"
                       style={{
                         padding: '8px 16px',
@@ -275,6 +354,17 @@ export default function AreaManagement() {
           >
             + Add New Area
           </button>
+
+          {deleteAreaTarget && (
+            <DeleteAreaDialog
+              area={deleteAreaTarget}
+              isPending={deleteArea.isPending}
+              onCancel={() => {
+                if (!deleteArea.isPending) setDeleteAreaTarget(null);
+              }}
+              onConfirm={handleDeleteArea}
+            />
+          )}
 
           {editArea && (
             <EditAreaModal

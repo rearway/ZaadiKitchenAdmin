@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react';
-import { useOutletContext, useNavigate } from 'react-router-dom';
+import { useOutletContext, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   useDailyOps,
   useAdvancePipeline,
@@ -11,11 +11,20 @@ import { useExportDailyOps } from '@/features/labels/api/labels.queries';
 import {
   REJECT_REASONS,
   creditPrefillSar,
+  formatOpsDeliveryDate,
+  pipelineAdvanceInput,
   type Issue,
-  type PipelineStage,
 } from '../model/daily-ops.schema';
+import {
+  isOpsIsoDate,
+  opsDateFromSearchParams,
+  todayKsa,
+  withOpsDateParam,
+} from '../model/daily-ops-date';
 import CreditModal from '../components/CreditModal';
 import OpenIssuesColumn from '../components/OpenIssuesColumn';
+import OpsDateNav from '../components/OpsDateNav';
+import PipelineAdvanceControl from '../components/PipelineAdvanceControl';
 import RejectModal from '../components/RejectModal';
 import { ApiError } from '@/shared/types/api';
 
@@ -25,15 +34,23 @@ const STAGE_ICON: Record<string, string> = { locked: '✓', dispatch: '🚚', de
 export default function DailyOps() {
   const { role } = useOutletContext<{ role: 'admin' | 'ops' }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isAdmin = role === 'admin';
+  const today = todayKsa();
+  const selectedDate = opsDateFromSearchParams(searchParams, today);
 
-  const { data: dailyOps, isLoading, error } = useDailyOps();
+  const handleDateChange = (isoDate: string) => {
+    if (!isOpsIsoDate(isoDate)) return;
+    setSearchParams((prev) => withOpsDateParam(prev, isoDate, todayKsa()));
+  };
+
+  const { data: dailyOps, isLoading, error } = useDailyOps(selectedDate);
   const {
     data: issuesQueue,
     isError: isIssuesError,
     error: issuesError,
     isLoading: isIssuesLoading,
-  } = useIssues();
+  } = useIssues(selectedDate);
   const advancePipeline = useAdvancePipeline();
   const creditIssue = useCreditIssue();
   const rejectIssue = useRejectIssue();
@@ -47,13 +64,8 @@ export default function DailyOps() {
   const [creditAmount, setCreditAmount] = useState<string>('');
   const [rejectReasonId, setRejectReasonId] = useState<string>('');
 
-  const todayDate = new Date().toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-
   const issues = isAdmin ? (issuesQueue?.issues ?? []) : [];
+  const dateNav = <OpsDateNav date={selectedDate} onChange={handleDateChange} />;
 
   const handleConfirmCredit = () => {
     if (!activeIssueForCredit) return;
@@ -92,40 +104,47 @@ export default function DailyOps() {
 
   const handleAdvance = () => {
     if (!dailyOps) return;
-    const stages = dailyOps.pipeline.stages.map((s) => s.id as PipelineStage);
-    const currentIndex = stages.indexOf(dailyOps.pipeline.stage);
-    const nextStage = stages[currentIndex + 1];
-    if (!nextStage) return;
+    const input = pipelineAdvanceInput(dailyOps.date, dailyOps.pipeline.stage);
+    if (!input) return;
     setErrorMsg(null);
-    advancePipeline.mutate(
-      { from_stage: dailyOps.pipeline.stage, to_stage: nextStage },
-      {
-        onError: (err) =>
-          setErrorMsg(err instanceof ApiError ? err.message : 'Failed to advance pipeline'),
-      }
-    );
+    advancePipeline.mutate(input, {
+      onError: (err) =>
+        setErrorMsg(err instanceof ApiError ? err.message : 'Failed to advance pipeline'),
+    });
   };
 
   if (isLoading) {
     return (
-      <div style={{ color: '#9CA3AF', fontSize: '14px', padding: '32px 0', textAlign: 'center' }}>
-        Loading daily ops…
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-16)' }}>
+        {dateNav}
+        <div style={{ color: '#9CA3AF', fontSize: '14px', padding: '32px 0', textAlign: 'center' }}>
+          Loading daily ops…
+        </div>
       </div>
     );
   }
 
   if (error || !dailyOps) {
     return (
-      <div
-        style={{ color: 'var(--danger)', fontSize: '14px', padding: '32px 0', textAlign: 'center' }}
-      >
-        {error instanceof ApiError ? error.message : 'Failed to load daily ops.'}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-16)' }}>
+        {dateNav}
+        <div
+          style={{
+            color: 'var(--danger)',
+            fontSize: '14px',
+            padding: '32px 0',
+            textAlign: 'center',
+          }}
+        >
+          {error instanceof ApiError ? error.message : 'Failed to load daily ops.'}
+        </div>
       </div>
     );
   }
 
   const { pipeline, meal_breakdown: mealBreakdown } = dailyOps;
   const canExportDailyOps = mealBreakdown.total > 0;
+  const headerDate = formatOpsDeliveryDate(dailyOps.date || selectedDate);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -154,9 +173,17 @@ export default function DailyOps() {
                 marginBottom: '8px',
               }}
             >
-              Daily Ops <span style={{ color: '#9CA3AF', fontSize: '20px' }}>· {todayDate}</span>
+              Daily Ops <span style={{ color: '#9CA3AF', fontSize: '20px' }}>· {headerDate}</span>
             </h1>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {dateNav}
+            <div
+              style={{
+                display: 'flex',
+                gap: '8px',
+                alignItems: 'center',
+                marginTop: 'var(--space-8)',
+              }}
+            >
               <span
                 style={{
                   backgroundColor: isAdmin ? '#333' : 'var(--ops)',
@@ -226,18 +253,13 @@ export default function DailyOps() {
           ))}
         </div>
 
-        {pipeline.can_advance && (
-          <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
-            <button
-              className="btn-primary"
-              style={{ padding: '10px 20px', opacity: advancePipeline.isPending ? 0.7 : 1 }}
-              disabled={advancePipeline.isPending}
-              onClick={handleAdvance}
-            >
-              {advancePipeline.isPending ? 'Advancing…' : (pipeline.advance_label ?? 'Advance →')}
-            </button>
-          </div>
-        )}
+        <PipelineAdvanceControl
+          stage={pipeline.stage}
+          canAdvance={pipeline.can_advance}
+          advanceLabel={pipeline.advance_label}
+          isPending={advancePipeline.isPending}
+          onAdvance={handleAdvance}
+        />
         {pipeline.locked_note && (
           <p style={{ color: '#6B7280', fontSize: '13px', marginTop: '12px', marginBottom: 0 }}>
             {pipeline.locked_note}
@@ -282,7 +304,17 @@ export default function DailyOps() {
                   opacity: !canExportDailyOps || exportDailyOps.isPending ? 0.5 : 1,
                 }}
                 disabled={!canExportDailyOps || exportDailyOps.isPending}
-                onClick={() => exportDailyOps.mutate({ role })}
+                onClick={() =>
+                  exportDailyOps.mutate(
+                    { role, deliveryDate: selectedDate },
+                    {
+                      onError: (err) =>
+                        setErrorMsg(
+                          err instanceof ApiError ? err.message : 'Failed to export daily ops'
+                        ),
+                    }
+                  )
+                }
               >
                 {exportDailyOps.isPending ? 'Exporting…' : '📄 Export'}
               </button>

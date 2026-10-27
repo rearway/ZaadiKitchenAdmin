@@ -12,6 +12,8 @@ type Props = {
   mode: 'create' | 'edit';
   driver: Driver | null;
   areas: Area[];
+  /** Areas already held by another driver. Hidden from this form. */
+  takenAreaIds: ReadonlySet<string>;
   areasLoading: boolean;
   areasError: string | null;
   serverError: string | null;
@@ -49,6 +51,7 @@ export default function DriverFormSheet({
   mode,
   driver,
   areas,
+  takenAreaIds,
   areasLoading,
   areasError,
   serverError,
@@ -69,6 +72,10 @@ export default function DriverFormSheet({
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [isPending, onClose]);
+
+  const visibleAreas = areas.filter(
+    (area) => areaIds.includes(area.id) || !takenAreaIds.has(area.id)
+  );
 
   const toggleArea = (areaId: string) => {
     setAreaIds((current) =>
@@ -254,8 +261,8 @@ export default function DriverFormSheet({
               }}
             >
               {areaIds.length === 0
-                ? 'No areas selected. A driver can cover more than one area.'
-                : `${areaIds.length} area${areaIds.length === 1 ? '' : 's'} selected.`}
+                ? 'No areas selected. A driver can cover more than one area. Taken areas stay hidden.'
+                : `${areaIds.length} area${areaIds.length === 1 ? '' : 's'} selected. Taken areas stay with their driver.`}
             </p>
             {areasLoading && (
               <p style={{ margin: 0, fontSize: 'var(--text-13)', color: 'var(--soft)' }}>
@@ -272,9 +279,14 @@ export default function DriverFormSheet({
                 No delivery areas yet. You can still save the driver and assign areas later.
               </p>
             )}
-            {areas.length > 0 && (
+            {!areasLoading && !areasError && areas.length > 0 && visibleAreas.length === 0 && (
+              <p style={{ margin: 0, fontSize: 'var(--text-13)', color: 'var(--soft)' }}>
+                Every service area already has a driver.
+              </p>
+            )}
+            {visibleAreas.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-8)' }}>
-                {areas.map((area) => {
+                {visibleAreas.map((area) => {
                   const selected = areaIds.includes(area.id);
                   return (
                     <button

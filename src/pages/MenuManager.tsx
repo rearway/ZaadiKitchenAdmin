@@ -12,10 +12,12 @@ import {
   useClearSlot,
   usePublishWeek,
   useUnpublishWeek,
+  useDeleteMeal,
   useUpdateMeal,
   useUpdateMealStatus,
   usePhotoUpload,
 } from '@/features/menu/api/menu.queries';
+import DeleteMealDialog from '@/features/menu/components/DeleteMealDialog';
 import MealRatingsPanel from '@/features/menu/components/MealRatingsPanel';
 import WeekAheadLockNote from '@/features/menu/components/WeekAheadLockNote';
 import WeekPlannerDay from '@/features/menu/components/WeekPlannerDay';
@@ -150,9 +152,11 @@ export default function MenuManager() {
   const [confirmClearSlotId, setConfirmClearSlotId] = useState<string | null>(null);
   const [confirmStatusMealId, setConfirmStatusMealId] = useState<string | null>(null);
   const [expandedRatingsMealId, setExpandedRatingsMealId] = useState<string | null>(null);
+  const [deleteMealTarget, setDeleteMealTarget] = useState<Meal | null>(null);
   const [confirmUnpublish, setConfirmUnpublish] = useState(false);
   const [liveMenuConfirm, setLiveMenuConfirm] = useState<LiveMenuConfirm | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [assignErrorMsg, setAssignErrorMsg] = useState<string | null>(null);
 
   const { weeks, access, isLoading: weeksLoading } = useMenuPlannerWeeks();
@@ -173,6 +177,7 @@ export default function MenuManager() {
   const clearSlot = useClearSlot(currentWeek?.id ?? '');
   const updateMeal = useUpdateMeal();
   const updateMealStatus = useUpdateMealStatus();
+  const deleteMeal = useDeleteMeal();
 
   const plannerDays = weekDetail?.days ?? [];
   const publishLocked = currentWeek ? isWeekBeyondHorizon(currentWeek.start_date, access) : false;
@@ -318,6 +323,27 @@ export default function MenuManager() {
     requestMealStatusChange(meal, 'active');
   };
 
+  const handleDeleteMeal = () => {
+    if (!deleteMealTarget) return;
+    setErrorMsg(null);
+    const name = deleteMealTarget.name_en || 'Meal';
+    const mealId = deleteMealTarget.id;
+    deleteMeal.mutate(mealId, {
+      onSuccess: () => {
+        setSuccessMsg(`${name} removed.`);
+        setDeleteMealTarget(null);
+        if (editMealId === mealId) setEditMealId(null);
+        if (confirmStatusMealId === mealId) setConfirmStatusMealId(null);
+        if (expandedRatingsMealId === mealId) setExpandedRatingsMealId(null);
+      },
+      onError: (err) => {
+        setDeleteMealTarget(null);
+        setSuccessMsg(null);
+        setErrorMsg(err instanceof Error ? err.message : 'Failed to delete meal.');
+      },
+    });
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       {/* Header & Tabs */}
@@ -342,6 +368,39 @@ export default function MenuManager() {
           </TabButton>
         </div>
       </div>
+
+      {successMsg && (
+        <div
+          style={{
+            backgroundColor: 'rgba(0, 200, 150, 0.1)',
+            border: '1px solid rgba(0, 200, 150, 0.3)',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            color: '#6EE7B7',
+            fontSize: '14px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <span>✓ {successMsg}</span>
+          <button
+            type="button"
+            onClick={() => setSuccessMsg(null)}
+            aria-label="Dismiss"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#9CA3AF',
+              cursor: 'pointer',
+              fontSize: '18px',
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {errorMsg && (
         <div
@@ -767,6 +826,24 @@ export default function MenuManager() {
                           {isStatusPending ? '…' : '→ Draft'}
                         </button>
                       )}
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        aria-label={`Delete ${meal.name_en || 'meal'}`}
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: '12px',
+                          color: 'var(--text-err)',
+                          border: '1px solid var(--danger-a30)',
+                        }}
+                        onClick={() => {
+                          setErrorMsg(null);
+                          setSuccessMsg(null);
+                          setDeleteMealTarget(meal);
+                        }}
+                      >
+                        Delete
+                      </button>
                     </div>
 
                     <div
@@ -880,6 +957,17 @@ export default function MenuManager() {
           onSelectionChange={() => setAssignErrorMsg(null)}
           onClose={closeAssignModal}
           onAssign={(meal: Meal) => handleAssign(assignModalSlot.id, meal)}
+        />
+      )}
+
+      {deleteMealTarget && (
+        <DeleteMealDialog
+          meal={deleteMealTarget}
+          isPending={deleteMeal.isPending}
+          onCancel={() => {
+            if (!deleteMeal.isPending) setDeleteMealTarget(null);
+          }}
+          onConfirm={handleDeleteMeal}
         />
       )}
 

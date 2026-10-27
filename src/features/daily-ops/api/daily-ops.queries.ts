@@ -8,17 +8,21 @@ import {
   creditIssueApi,
   rejectIssueApi,
 } from './daily-ops.api';
-import type { AdvancePipelineInput, CreditIssueInput, RejectIssueInput } from '../model/daily-ops.schema';
+import type {
+  AdvancePipelineInput,
+  CreditIssueInput,
+  RejectIssueInput,
+} from '../model/daily-ops.schema';
 
 function useRole() {
   return useSessionStore((s) => s.user?.role ?? 'ops');
 }
 
-export function useDailyOps() {
+export function useDailyOps(date: string) {
   const role = useRole();
   return useQuery({
-    queryKey: [...queryKeys.dailyOps.detail, role],
-    queryFn: () => getDailyOpsApi(role),
+    queryKey: [...queryKeys.dailyOps.detail, role, date],
+    queryFn: () => getDailyOpsApi(role, date),
   });
 }
 
@@ -32,11 +36,11 @@ export function useAdvancePipeline() {
 }
 
 /** Admin-only — the caller gates rendering/enabling on role === 'admin'. */
-export function useIssues() {
+export function useIssues(date?: string) {
   const role = useRole();
   return useQuery({
-    queryKey: queryKeys.dailyOps.issues,
-    queryFn: getIssuesApi,
+    queryKey: [...queryKeys.dailyOps.issues, date ?? 'default'],
+    queryFn: () => getIssuesApi(date),
     enabled: role === 'admin',
   });
 }
