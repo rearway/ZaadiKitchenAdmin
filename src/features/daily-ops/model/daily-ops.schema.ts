@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { mealTypeText } from '@/features/settings';
 
 export type PipelineStage = 'pending' | 'locked' | 'dispatch' | 'delivered';
 const PIPELINE_STAGES: PipelineStage[] = ['pending', 'locked', 'dispatch', 'delivered'];
@@ -153,10 +154,7 @@ export function creditPrefillSar(planPriceSar: number | null | undefined): strin
 }
 
 export function mealTypeLabel(mealType: string | null | undefined): string {
-  const key = mealType?.trim().toLowerCase() ?? '';
-  if (key === 'executive') return 'Executive';
-  if (key === 'salad') return 'Salad';
-  return mealType?.trim() ?? '';
+  return mealTypeText(mealType, 'name');
 }
 
 export function formatOpsDeliveryDate(value: string | null | undefined): string {

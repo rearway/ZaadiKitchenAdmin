@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCreateMeal, useImportMeals, usePhotoUpload } from '@/features/menu/api/menu.queries';
+import { useMealTypeDisplays } from '@/features/settings';
 import { toKeyIngredientsArray } from '@/features/menu/model/menu.schema';
 import type { MealType, ImportResult } from '@/features/menu/model/menu.schema';
 import { ApiError } from '@/shared/types/api';
@@ -10,6 +11,7 @@ const ACCEPTED_PHOTO_TYPES = 'image/jpeg,image/png,image/webp';
 
 export default function AddDish() {
   const navigate = useNavigate();
+  const { label: mealTypeName } = useMealTypeDisplays();
   const createMeal = useCreateMeal();
   const uploadPhoto = usePhotoUpload();
   const importMeals = useImportMeals();
@@ -180,7 +182,7 @@ export default function AddDish() {
                 color: mealType === 'executive' ? '#FFF' : '#9CA3AF',
               }}
             >
-              🍛 Executive
+              🍛 {mealTypeName('executive')}
             </button>
             <button
               onClick={() => setMealType('salad')}
@@ -192,7 +194,7 @@ export default function AddDish() {
                 color: mealType === 'salad' ? '#FFF' : '#9CA3AF',
               }}
             >
-              🥗 Salad
+              🥗 {mealTypeName('salad')}
             </button>
           </div>
         </div>

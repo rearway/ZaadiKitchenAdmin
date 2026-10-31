@@ -5,6 +5,7 @@ import type { GetMealRatingsParams } from '@/features/menu/model/meal-ratings.sc
 import type { AssignableMealsParams } from '@/features/menu/model/menu.schema';
 
 export const queryKeys = {
+  appSettings: ['app', 'settings'] as const,
   areas: {
     all: ['areas'] as const,
     buildings: (areaId: string) => ['areas', areaId, 'buildings'] as const,

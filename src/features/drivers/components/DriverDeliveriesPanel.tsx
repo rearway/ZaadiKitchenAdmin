@@ -1,10 +1,10 @@
 import { ApiError } from '@/shared/types/api';
+import { useMealTypeDisplays } from '@/features/settings';
 import { useDriverDeliveries } from '../api/drivers.queries';
 import {
   deliveryReviewView,
   deliveryStatusLabel,
   formatOpsDayLabel,
-  mealTypeLabel,
   type DeliveryMealStatus,
   type DriverDelivery,
 } from '../model/driver-deliveries.schema';
@@ -40,6 +40,7 @@ function ReviewCell({ delivery }: { delivery: DriverDelivery }) {
 }
 
 export default function DriverDeliveriesPanel({ driverId, date, onAssign }: Props) {
+  const { label: mealTypeName } = useMealTypeDisplays();
   const deliveries = useDriverDeliveries(driverId, date);
   const rows = deliveries.data?.deliveries ?? [];
   const delivered = rows.filter((row) => row.status === 'delivered').length;
@@ -179,7 +180,7 @@ export default function DriverDeliveriesPanel({ driverId, date, onAssign }: Prop
                 {cellText(row.phone)}
               </span>
               <span style={{ color: 'var(--text-3)' }}>{cellText(row.mealName)}</span>
-              <span style={{ color: 'var(--text-3)' }}>{mealTypeLabel(row.mealType)}</span>
+              <span style={{ color: 'var(--text-3)' }}>{mealTypeName(row.mealType) || '—'}</span>
               <span
                 style={{
                   color: statusColor(row.status),
