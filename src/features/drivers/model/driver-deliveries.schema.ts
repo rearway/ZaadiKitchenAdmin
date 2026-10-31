@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { mealTypeText } from '@/features/settings';
 
 /** Calendar date in Asia/Riyadh (`YYYY-MM-DD`). The kitchen ops day is KSA, not the browser zone. */
 export function formatDateKsa(date: Date): string {
@@ -57,10 +58,8 @@ export function deliveryStatusLabel(status: DeliveryMealStatus): string {
 }
 
 export function mealTypeLabel(mealType: string): string {
-  if (mealType === 'salad') return 'Salad';
-  if (mealType === 'executive') return 'Executive';
-  if (!mealType) return '—';
-  return mealType.charAt(0).toUpperCase() + mealType.slice(1);
+  if (!mealType?.trim()) return '—';
+  return mealTypeText(mealType, 'name');
 }
 
 export type DriverDeliveryReview = {
