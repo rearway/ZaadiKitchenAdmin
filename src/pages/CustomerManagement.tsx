@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useMealTypeDisplays } from '@/features/settings';
 import { useSessionStore } from '@/store/useSessionStore';
 import {
   useCustomers,
@@ -23,6 +24,7 @@ import {
 } from '@/features/customers/model/customers.schema';
 
 export default function CustomerManagement() {
+  const { label: mealTypeName } = useMealTypeDisplays();
   const [searchParams] = useSearchParams();
   const role = useSessionStore((s) => s.user?.role);
   const isAdmin = role === 'admin';
@@ -679,7 +681,7 @@ export default function CustomerManagement() {
                                         <span>{d.date}</span>
                                         <span style={{ color: '#9CA3AF' }}>
                                           {d.status}
-                                          {d.mealType ? ` · ${d.mealType}` : ''}
+                                          {d.mealType ? ` · ${mealTypeName(d.mealType)}` : ''}
                                         </span>
                                       </div>
                                     ))}

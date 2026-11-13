@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useMealTypeDisplays } from '@/features/settings';
 import type { Meal } from '../model/menu.schema';
 import type { PlannerSlot, WeekDayDetail } from '../model/menu.schema';
 
@@ -67,6 +68,7 @@ function StreamColumn({
   pendingAddKey: string | null;
   setDefaultPending: boolean;
 }) {
+  const { label: mealTypeName } = useMealTypeDisplays();
   const filledCount = slots.filter((s) => s.meal).length;
   const canAddInStream = canEditWeek && canAdd;
 
@@ -256,7 +258,7 @@ function StreamColumn({
         >
           {pendingAddKey === `${deliveryDate}-${mealType}`
             ? '…'
-            : `+ Add ${mealType === 'executive' ? 'executive' : 'salad'}`}
+            : `+ Add ${mealTypeName(mealType, 'short')}`}
         </button>
       )}
     </div>
@@ -281,6 +283,7 @@ export default function WeekPlannerDay(props: WeekPlannerDayProps) {
     pendingAddKey,
     setDefaultPending,
   } = props;
+  const { label: mealTypeName } = useMealTypeDisplays();
 
   return (
     <div
@@ -297,7 +300,7 @@ export default function WeekPlannerDay(props: WeekPlannerDayProps) {
       </div>
       <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
         <StreamColumn
-          title="Executive"
+          title={mealTypeName('executive')}
           slots={day.executive_slots}
           canAdd={day.can_add_executive}
           mealType="executive"
@@ -318,7 +321,7 @@ export default function WeekPlannerDay(props: WeekPlannerDayProps) {
           setDefaultPending={setDefaultPending}
         />
         <StreamColumn
-          title="Salad"
+          title={mealTypeName('salad')}
           slots={day.salad_slots}
           canAdd={day.can_add_salad}
           mealType="salad"

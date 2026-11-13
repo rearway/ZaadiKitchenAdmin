@@ -1,9 +1,5 @@
-import {
-  formatOpsDeliveryDate,
-  formatOpsSubmittedAt,
-  mealTypeLabel,
-  type Issue,
-} from '../model/daily-ops.schema';
+import { useMealTypeDisplays } from '@/features/settings';
+import { formatOpsDeliveryDate, formatOpsSubmittedAt, type Issue } from '../model/daily-ops.schema';
 
 const MEAL_TYPE_EMOJI: Record<string, string> = { executive: '🍛', salad: '🥗' };
 const ISSUE_TYPE_EMOJI: Record<string, string> = {
@@ -108,9 +104,10 @@ function OpenIssueCard({
   onCredit: (issue: Issue) => void;
   onReject: (issue: Issue) => void;
 }) {
+  const { label: mealTypeName } = useMealTypeDisplays();
   const phone = issue.customer_phone?.trim() ?? '';
   const mealName = issue.meal_name?.trim() ?? '';
-  const mealLabel = mealTypeLabel(issue.meal_type);
+  const mealLabel = mealTypeName(issue.meal_type);
   const mealEmoji = MEAL_TYPE_EMOJI[issue.meal_type?.trim().toLowerCase() ?? ''] ?? '';
   const mealLine = [mealName, mealLabel].filter(Boolean).join(' · ');
   const delivery = formatOpsDeliveryDate(issue.delivery_date);

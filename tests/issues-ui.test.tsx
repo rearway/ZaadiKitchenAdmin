@@ -1,7 +1,8 @@
 // JSX tests need the app tsconfig runtime: npx tsx --tsconfig tsconfig.app.json --test tests/issues-ui.test.tsx
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { createElement } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import CustomerIssueHistory from '../src/features/customers/components/CustomerIssueHistory.tsx';
 import { CustomerHistorySchema } from '../src/features/customers/model/customers.schema.ts';
@@ -9,6 +10,37 @@ import CreditModal from '../src/features/daily-ops/components/CreditModal.tsx';
 import OpenIssuesColumn from '../src/features/daily-ops/components/OpenIssuesColumn.tsx';
 import RejectModal from '../src/features/daily-ops/components/RejectModal.tsx';
 import { creditPrefillSar, type Issue } from '../src/features/daily-ops/model/daily-ops.schema.ts';
+
+const mealTypes = [
+  {
+    slug: 'executive',
+    name_en: 'Custom Balanced',
+    name_ar: 'متوازن',
+    short_en: 'Custom',
+    short_ar: 'م',
+    sort: 1,
+  },
+  {
+    slug: 'salad',
+    name_en: 'Custom Light',
+    name_ar: 'لايت',
+    short_en: 'Lite',
+    short_ar: 'ل',
+    sort: 2,
+  },
+];
+
+function renderWithSettings(node: ReactNode) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  client.setQueryDefaults(['app', 'settings'], {
+    queryFn: async () => mealTypes,
+    staleTime: Infinity,
+  });
+  client.setQueryData(['app', 'settings'], mealTypes);
+  return renderToStaticMarkup(createElement(QueryClientProvider, { client }, node));
+}
 
 const issue: Issue = {
   issue_id: 'iss_1',
@@ -27,7 +59,7 @@ const issue: Issue = {
 
 describe('open issues column', () => {
   it('renders phone, meal, delivery date, and submitted time', () => {
-    const html = renderToStaticMarkup(
+    const html = renderWithSettings(
       createElement(OpenIssuesColumn, {
         issues: [issue],
         isLoading: false,
@@ -40,7 +72,7 @@ describe('open issues column', () => {
 
     assert.match(html, /Nora Ali/);
     assert.match(html, /href="tel:\+966500000001"/);
-    assert.match(html, /Chicken Kabsa · Executive/);
+    assert.match(html, /Chicken Kabsa · Custom Balanced/);
     assert.match(html, /Delivery Oct 20, 2026/);
     assert.match(html, /Submitted Oct 21, 2026, 11:15 AM/);
     assert.match(html, /Received the salad box/);

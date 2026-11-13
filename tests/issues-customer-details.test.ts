@@ -205,8 +205,8 @@ describe('daily ops issues queue', () => {
   });
 
   it('formats meal type, delivery date, and submitted time for the card', () => {
-    assert.equal(mealTypeLabel('executive'), 'Executive');
-    assert.equal(mealTypeLabel('salad'), 'Salad');
+    assert.equal(mealTypeLabel('executive'), 'Platio Balanced');
+    assert.equal(mealTypeLabel('salad'), 'Platio Light');
     assert.equal(mealTypeLabel(null), '');
     assert.equal(formatOpsDeliveryDate('2026-10-20'), 'Oct 20, 2026');
     assert.equal(formatOpsDeliveryDate(undefined), '');
