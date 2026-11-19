@@ -13,6 +13,9 @@ export const MealTypeSchema = z
   });
 export type MealType = 'executive' | 'salad';
 
+/** Dishes allowed on one delivery day for one meal type. */
+export const MAX_DISHES_PER_STREAM = 4;
+
 export const MealStatusSchema = z
   .enum(['active', 'draft', 'updated', 'ACTIVE', 'DRAFT', 'UPDATED'])
   .transform((s) => s.toLowerCase() as MealStatus);
@@ -79,6 +82,8 @@ const MealPendingSchema = z
   .object({
     name_en: z.string().optional(),
     name_ar: z.string().nullable().optional(),
+    meal_type: MealTypeSchema.optional(),
+    mealType: MealTypeSchema.optional(),
     kcal: z.number().nullable().optional(),
     macros: MacrosSchema.optional(),
     chef_note: z.string().nullable().optional(),
@@ -93,6 +98,7 @@ const MealPendingSchema = z
     return {
       name_en: p.name_en,
       name_ar: p.name_ar ?? null,
+      meal_type: p.meal_type ?? p.mealType,
       kcal: p.kcal ?? null,
       macros: p.macros,
       chef_note: p.chef_note ?? null,
@@ -108,6 +114,7 @@ export type MealDetail = Meal & { pending: MealPending | null };
 export type MealPending = {
   name_en?: string;
   name_ar?: string | null;
+  meal_type?: MealType;
   kcal?: number | null;
   macros?: Macros;
   chef_note?: string | null;
@@ -166,7 +173,7 @@ export function mealEditableFields(detail: MealDetail) {
   return {
     name_en: p?.name_en ?? detail.name_en,
     name_ar: p?.name_ar ?? detail.name_ar ?? '',
-    meal_type: (detail.meal_type ?? 'executive') as MealType,
+    meal_type: (p?.meal_type ?? detail.meal_type ?? 'executive') as MealType,
     kcal: p?.kcal ?? detail.kcal,
     macros: p?.macros ?? detail.macros,
     chef_note: p?.chef_note ?? detail.chef_note ?? '',
@@ -326,8 +333,8 @@ export function mapApiDayToWeekDayDetail(day: RawApiDay): WeekDayDetail {
     day_label: day.day_label,
     date_label: day.date_label,
     default_meal_id: defaultMealId,
-    can_add_executive: day.can_add_executive ?? executiveRaw.length < 3,
-    can_add_salad: day.can_add_salad ?? saladRaw.length < 3,
+    can_add_executive: day.can_add_executive ?? executiveRaw.length < MAX_DISHES_PER_STREAM,
+    can_add_salad: day.can_add_salad ?? saladRaw.length < MAX_DISHES_PER_STREAM,
     executive_slots: executiveSlots,
     salad_slots: saladSlots,
   };
@@ -462,7 +469,10 @@ export function classifyAssignError(err: unknown): AssignError {
   const message = err instanceof Error ? err.message : '';
   switch (errorCode) {
     case ASSIGN_ERROR.DAY_MEAL_TYPE_LIMIT:
-      return { kind: 'day_meal_type_limit', message: message || 'This day already has 3 dishes for that stream.' };
+      return {
+        kind: 'day_meal_type_limit',
+        message: message || `This day already has ${MAX_DISHES_PER_STREAM} dishes for that stream.`,
+      };
     case ASSIGN_ERROR.MEAL_IS_DRAFT:
       return { kind: 'meal_is_draft', message: 'Activate this meal before assigning it.' };
     case ASSIGN_ERROR.SLOT_NOT_EDITABLE:

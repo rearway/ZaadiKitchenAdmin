@@ -20,7 +20,7 @@ export default function AddArea() {
     }
     setError('');
     createArea.mutate(
-      { name: name.trim(), coverage: coverage.trim() || undefined, status },
+      { name: name.trim(), description: coverage.trim() || undefined, status },
       {
         onSuccess: () => navigate('/areas'),
         onError: (err) => {

@@ -10,14 +10,9 @@ import {
   todayKsa,
   addDaysToIsoDate,
 } from '../model/labels.schema';
+import { useMealTypeDisplays } from '@/features/settings';
 import { useSessionStore } from '@/store/useSessionStore';
 import { ApiError } from '@/shared/types/api';
-
-const MEAL_FILTERS: { id: MealTypeFilter; chipLabel: string }[] = [
-  { id: 'all', chipLabel: 'All' },
-  { id: 'executive', chipLabel: '🍛 Exec' },
-  { id: 'salad', chipLabel: '🥗 Salad' },
-];
 
 const DAY_FILTERS: { id: LabelDayFilter; label: string }[] = [
   { id: 'today', label: 'Today' },
@@ -88,6 +83,12 @@ function DatePickerField({ value, min, max, isCustom, onChange }: DatePickerFiel
 
 export default function PrintLabels() {
   const navigate = useNavigate();
+  const { label: mealTypeName } = useMealTypeDisplays();
+  const mealFilters: { id: MealTypeFilter; chipLabel: string }[] = [
+    { id: 'all', chipLabel: 'All' },
+    { id: 'executive', chipLabel: `🍛 ${mealTypeName('executive', 'short')}` },
+    { id: 'salad', chipLabel: `🥗 ${mealTypeName('salad', 'short')}` },
+  ];
   const [searchParams, setSearchParams] = useSearchParams();
   const role = useSessionStore((s) => s.user?.role ?? 'admin');
 
@@ -300,7 +301,7 @@ export default function PrintLabels() {
 
           {/* Meal type filter chips */}
           <div style={{ display: 'flex', gap: '8px' }}>
-            {MEAL_FILTERS.map((f) => (
+            {mealFilters.map((f) => (
               <button
                 key={f.id}
                 onClick={() => setFilter(f.id)}
@@ -395,7 +396,7 @@ export default function PrintLabels() {
                         textAlign: 'center',
                       }}
                     >
-                      {label.meal_type === 'executive' ? '🍛 Exec' : '🥗 Salad'}
+                      {label.meal_type === 'salad' ? '🥗' : '🍛'} {mealTypeName(label.meal_type, 'short')}
                     </div>
                   </div>
 
@@ -478,6 +479,7 @@ type LabelPreviewModalProps = {
 };
 
 function LabelPreviewModal({ label, onClose, onDownload, isDownloading }: LabelPreviewModalProps) {
+  const { label: mealTypeName } = useMealTypeDisplays();
   const deliveryDateLabel = label.delivery_date
     ? new Date(label.delivery_date).toLocaleDateString('en-US', {
         weekday: 'long',
@@ -624,7 +626,7 @@ function LabelPreviewModal({ label, onClose, onDownload, isDownloading }: LabelP
                     marginBottom: label.meal_name ? '2px' : '4px',
                   }}
                 >
-                  {label.meal_type === 'executive' ? '🍛 Executive Meal' : '🥗 Salad Meal'}
+                  {label.meal_type === 'salad' ? '🥗' : '🍛'} {mealTypeName(label.meal_type)}
                 </div>
                 {label.meal_name ? (
                   <div
@@ -703,13 +705,13 @@ function LabelPreviewModal({ label, onClose, onDownload, isDownloading }: LabelP
               style={{ color: '#FFF', fontSize: '13px', cursor: 'pointer', textDecoration: 'underline' }}
               onClick={() => onDownload({ mealType: 'executive' })}
             >
-              Exec only
+              {mealTypeName('executive', 'short')} only
             </span>
             <span
               style={{ color: '#FFF', fontSize: '13px', cursor: 'pointer', textDecoration: 'underline' }}
               onClick={() => onDownload({ mealType: 'salad' })}
             >
-              Salad only
+              {mealTypeName('salad', 'short')} only
             </span>
           </div>
         </div>

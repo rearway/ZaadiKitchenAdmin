@@ -43,6 +43,7 @@ import {
   toKeyIngredientsArray,
 } from '@/features/menu/model/menu.schema';
 import { isWeekBeyondHorizon, weekAheadLockMessage } from '@/features/menu/model/week-horizon';
+import { useMealTypeDisplays } from '@/features/settings';
 import { queryKeys } from '@/shared/lib/api/queryKeys';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { ApiError } from '@/shared/types/api';
@@ -139,6 +140,7 @@ function MealIcon({
 
 export default function MenuManager() {
   const navigate = useNavigate();
+  const { label: mealTypeName } = useMealTypeDisplays();
   const [activeTab, setActiveTab] = useState<'planner' | 'library'>('planner');
   const [weekIndex, setWeekIndex] = useState(0);
   const [assignModalSlot, setAssignModalSlot] = useState<PlannerSlot | null>(null);
@@ -689,7 +691,13 @@ export default function MenuManager() {
             ))}
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {([['all', 'All types'], ['executive', '🍛 Exec'], ['salad', '🥗 Salad']] as [MealTypeFilter, string][]).map(
+            {(
+              [
+                ['all', 'All types'],
+                ['executive', `🍛 ${mealTypeName('executive', 'short')}`],
+                ['salad', `🥗 ${mealTypeName('salad', 'short')}`],
+              ] as [MealTypeFilter, string][]
+            ).map(
               ([value, label]) => (
                 <button
                   key={value}
@@ -760,7 +768,7 @@ export default function MenuManager() {
                         </p>
                       )}
                       <div style={{ fontSize: '13px', color: '#9CA3AF' }}>
-                        {meal.meal_type === 'executive' ? 'Executive' : 'Salad'}
+                        {mealTypeName(meal.meal_type)}
                         {meal.kcal ? ` · ${meal.kcal} kcal` : ''}
                         {meal.macros ? ` · ${meal.macros.protein_g}g protein` : ''}
                       </div>
@@ -1127,6 +1135,7 @@ function AssignDishModal({
   onClose: () => void;
   onAssign: (meal: Meal) => void;
 }) {
+  const { label: mealTypeName } = useMealTypeDisplays();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Meal | null>(null);
   const debouncedSearch = useDebouncedValue(search.trim());
@@ -1194,7 +1203,7 @@ function AssignDishModal({
           Assign Dish
         </h2>
         <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '24px' }}>
-          {dayLabel} — {streamType === 'executive' ? 'Executive' : 'Salad'} dishes only
+          {dayLabel} — {mealTypeName(streamType)} dishes only
         </p>
 
         <input
@@ -1240,7 +1249,7 @@ function AssignDishModal({
         >
           {!isLoading && streamMeals.length === 0 && (
             <div style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF', fontSize: '14px' }}>
-              No active {streamType === 'executive' ? 'executive' : 'salad'} meals found. Activate a meal in the
+              No active {mealTypeName(streamType)} meals found. Activate a meal in the
               Meal Library to assign it.
             </div>
           )}
@@ -1271,7 +1280,7 @@ function AssignDishModal({
                     </p>
                   )}
                   <div style={{ fontSize: '13px', color: '#9CA3AF' }}>
-                    {meal.meal_type === 'executive' ? 'Executive' : 'Salad'}
+                    {mealTypeName(meal.meal_type)}
                     {meal.kcal ? ` · ${meal.kcal} kcal` : ''}
                   </div>
                   {(meal.status === 'updated' || meal.has_pending_changes) && (
@@ -1362,6 +1371,7 @@ function EditMealModal({
   }) => void;
   onActivate: (meal: Meal) => void;
 }) {
+  const { label: mealTypeName } = useMealTypeDisplays();
   const { data: detail, isLoading: detailLoading } = useMealDetail(mealId);
   const uploadPhoto = usePhotoUpload();
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -1571,6 +1581,7 @@ function EditMealModal({
               <div style={{ color: '#9CA3AF', marginBottom: '6px', fontWeight: 600 }}>Live (customers)</div>
               <div style={{ color: '#FFF' }}>{detail.name_en}</div>
               {detail.name_ar && <div style={{ color: '#9CA3AF', direction: 'rtl' }}>{detail.name_ar}</div>}
+              <div style={{ color: '#9CA3AF', marginTop: '4px' }}>{mealTypeName(detail.meal_type)}</div>
               {detail.kcal != null && <div style={{ color: '#9CA3AF', marginTop: '4px' }}>{detail.kcal} kcal</div>}
             </div>
             <div style={{ backgroundColor: 'rgba(245, 230, 66, 0.06)', borderRadius: '8px', padding: '12px', border: '1px solid rgba(245, 230, 66, 0.2)' }}>
@@ -1579,6 +1590,9 @@ function EditMealModal({
               {(detail.pending?.name_ar ?? detail.name_ar) && (
                 <div style={{ color: '#9CA3AF', direction: 'rtl' }}>{detail.pending?.name_ar ?? detail.name_ar}</div>
               )}
+              <div style={{ color: '#9CA3AF', marginTop: '4px' }}>
+                {mealTypeName(detail.pending?.meal_type ?? detail.meal_type)}
+              </div>
               {(detail.pending?.kcal ?? detail.kcal) != null && (
                 <div style={{ color: '#9CA3AF', marginTop: '4px' }}>{detail.pending?.kcal ?? detail.kcal} kcal</div>
               )}
@@ -1654,7 +1668,7 @@ function EditMealModal({
                   cursor: 'pointer',
                 }}
               >
-                {t === 'executive' ? '🍛 Executive' : '🥗 Salad'}
+                {t === 'executive' ? '🍛' : '🥗'} {mealTypeName(t)}
               </button>
             ))}
           </div>
