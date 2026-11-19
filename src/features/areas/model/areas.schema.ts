@@ -36,7 +36,7 @@ export type Building = z.infer<typeof BuildingSchema>;
 
 export const CreateAreaInputSchema = z.object({
   name: z.string().min(1, 'Area name is required'),
-  coverage: z.string().optional(),
+  description: z.string().optional(),
   status: z.enum(['active', 'coming_soon', 'paused']),
 });
 export type CreateAreaInput = z.infer<typeof CreateAreaInputSchema>;
